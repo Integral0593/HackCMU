@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<!-- Form to update my status -->
+<form method="post" action="/status/update">
+  <input name="text" placeholder="What are you doing?">
+  <select name="activity">
+    <option value="studying">Studying</option>
+    <option value="in_class">In class</option>
+    <option value="free">Free</option>
+  </select>
+  <input name="location" placeholder="UC / Hunt Library">
+  <button type="submit">Update</button>
+</form>
+
+<!-- Upcoming events -->
+<h3>Upcoming (7 days)</h3>
+<ul>
+  {% for e in upcoming %}
+    <li>{{ e.title }} · {{ e.dt }} · {{ e.location }}</li>
+  {% else %}
+    <li>No upcoming events</li>
+  {% endfor %}
+</ul>
+{% endblock %}
