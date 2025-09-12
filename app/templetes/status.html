@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Status</h1>
+
+<div class="card">
+  <h3>Update Status</h3>
+  <form method="post" action="/status/update">
+    <input name="text" placeholder="What are you doing?">
+    <select name="activity">
+      <option value="studying">Studying</option>
+      <option value="in_class">In class</option>
+      <option value="in_library">In library</option>
+      <option value="free">Free</option>
+    </select>
+    <input name="location" placeholder="UC / Library">
+    <button type="submit">Update</button>
+  </form>
+  {% if my_status %}
+    <p class="muted">Latest: {{ my_status.text }} · {{ my_status.activity }} @ {{ my_status.location }}</p>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Upcoming (7 days)</h3>
+  <ul>
+    {% for e in upcoming %}
+      <li>{{ e.type }} · {{ e.title }} · {{ e.dt }} @ {{ e.location }}</li>
+    {% else %}
+      <li class="muted">No upcoming events</li>
+    {% endfor %}
+  </ul>
+</div>
+
+<div class="card">
+  <h3>Friends at UC/Library</h3>
+  <ul>
+    {% for s in friend_statuses %}
+      <li>#{{ s.user_id }} · {{ s.text }} ({{ s.location }})</li>
+    {% else %}
+      <li class="muted">No friend activity</li>
+    {% endfor %}
+  </ul>
+</div>
+{% endblock %}

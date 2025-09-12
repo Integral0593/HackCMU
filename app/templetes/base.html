@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SlotSync</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <main class="page">
+    {% block content %}{% endblock %}
+    <div style="height:72px"></div> <!-- spacer to avoid bottom bar overlap -->
+  </main>
+
+  <!-- Bottom Tab Bar -->
+  <nav class="tabbar">
+    <a class="tab {% if active_tab=='status' %}active{% endif %}" href="/status">Status</a>
+    <a class="tab {% if active_tab=='schedule' %}active{% endif %}" href="/schedule">Schedule</a>
+    <a class="tab {% if active_tab=='friends' %}active{% endif %}" href="/friends">Friends</a>
+    <a class="tab {% if active_tab=='account' %}active{% endif %}" href="/account">My Account</a>
+  </nav>
+</body>
+</html>
