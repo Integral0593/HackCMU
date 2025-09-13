@@ -76,12 +76,12 @@ export default function StatusBoard({
   }
 
   return (
-    <div className={cn("space-y-4", className)}>
+    <div className={cn("space-y-3 sm:space-y-4", className)}>
       {/* Header with refresh */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-0">
         <div className="flex items-center gap-2">
-          <Clock className="h-5 w-5 text-muted-foreground" />
-          <span className="text-sm text-muted-foreground">
+          <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+          <span className="text-xs sm:text-sm text-muted-foreground">
             {statusData ? `Updated at ${formatTime(statusData.now)}` : 'No data'}
           </span>
         </div>
@@ -91,20 +91,21 @@ export default function StatusBoard({
           onClick={onRefresh}
           disabled={isLoading}
           data-testid="refresh-status"
+          className="w-full sm:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
         >
-          <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
+          <RefreshCw className={cn("h-3 w-3 sm:h-4 sm:w-4 mr-2", isLoading && "animate-spin")} />
           Refresh
         </Button>
       </div>
 
       {/* Status boards */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="grid sm:grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
         {/* In Class */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              In Class ({statusData?.in_class.length || 0})
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+              <span className="text-base sm:text-lg">In Class ({statusData?.in_class.length || 0})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -132,8 +133,8 @@ export default function StatusBoard({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-status-free" />
-              Available ({statusData?.free.length || 0})
+              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-status-free" />
+              <span className="text-base sm:text-lg">Available ({statusData?.free.length || 0})</span>
             </CardTitle>
           </CardHeader>
           <CardContent>

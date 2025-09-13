@@ -123,35 +123,37 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center justify-between">
+        <CardTitle className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
           <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            My Schedule
+            <Clock className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span className="text-base sm:text-lg">My Schedule</span>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-col xs:flex-row gap-2">
             <Button 
               size="sm" 
               variant="outline"
               onClick={handleUploadClick}
               disabled={isUploading || !userId}
               data-testid="upload-ics-button"
+              className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
             >
-              <Upload className="h-4 w-4 mr-1" />
+              <Upload className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               {isUploading ? "Uploading..." : "Import ICS"}
             </Button>
             <Button 
               size="sm" 
               onClick={() => setIsFormOpen(!isFormOpen)}
               data-testid="add-schedule-button"
+              className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               Add Course
             </Button>
           </div>
         </CardTitle>
       </CardHeader>
       
-      <CardContent className="space-y-4">
+      <CardContent className="space-y-3 sm:space-y-4">
         {/* Hidden file input */}
         <input
           ref={fileInputRef}
@@ -172,15 +174,15 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
             schedules.map((schedule) => (
               <div 
                 key={schedule.id} 
-                className="flex items-center justify-between p-3 bg-accent/50 rounded-md"
+                className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-accent/50 rounded-md gap-2 sm:gap-0"
                 data-testid={`schedule-item-${schedule.id}`}
               >
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline">{schedule.courseCode}</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline" className="text-xs">{schedule.courseCode}</Badge>
                     <span className="font-medium text-sm">{schedule.courseName}</span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {schedule.day.charAt(0).toUpperCase() + schedule.day.slice(1)} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
                     {schedule.location && ` • ${schedule.location}`}
                   </p>
@@ -191,6 +193,7 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                     variant="ghost"
                     onClick={() => onRemoveSchedule(schedule.id)}
                     data-testid={`remove-schedule-${schedule.id}`}
+                    className="self-end sm:self-center min-h-[36px] min-w-[36px]"
                   >
                     <X className="h-4 w-4" />
                   </Button>
@@ -203,10 +206,10 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
         {/* Add Course Form */}
         {isFormOpen && (
           <Card>
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-3 sm:space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <FormField
                       control={form.control}
                       name="courseCode"
@@ -269,7 +272,7 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                     )}
                   />
 
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <FormField
                       control={form.control}
                       name="startTime"
@@ -326,11 +329,12 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                     )}
                   />
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-col xs:flex-row gap-2">
                     <Button 
                       type="submit" 
                       size="sm"
                       data-testid="submit-schedule"
+                      className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
                     >
                       Add Course
                     </Button>
@@ -340,6 +344,7 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                       size="sm"
                       onClick={() => setIsFormOpen(false)}
                       data-testid="cancel-schedule"
+                      className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
                     >
                       Cancel
                     </Button>

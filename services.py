@@ -252,6 +252,7 @@ class ICSParser:
                     dtstart = component.get('dtstart')
                     dtend = component.get('dtend')
                     location = str(component.get('location', ''))
+                    rrule = component.get('rrule')
                     
                     if not dtstart or not dtend:
                         continue
@@ -264,7 +265,7 @@ class ICSParser:
                     if hasattr(start_dt, 'hour'):
                         start_time = start_dt.strftime('%H:%M')
                         end_time = end_dt.strftime('%H:%M')
-                        day_name = start_dt.strftime('%A').lower()
+                        initial_day_name = start_dt.strftime('%A').lower()
                     else:
                         # All-day event, skip
                         continue
@@ -272,23 +273,47 @@ class ICSParser:
                     # Extract course code and name from summary
                     course_code, course_name = self._parse_course_summary(summary)
                     
-                    try:
-                        day = DayType(day_name)
-                    except ValueError:
-                        continue  # Skip invalid days
+                    # Check for recurring pattern (RRULE)
+                    recurring_days = []
+                    if rrule:
+                        # Parse RRULE to extract BYDAY values
+                        recurring_days = self._parse_rrule_days(rrule)
                     
-                    schedule = Schedule(
-                        id=str(uuid.uuid4()),
-                        user_id=user_id,
-                        course_code=course_code,
-                        course_name=course_name,
-                        day=day,
-                        start_time=start_time,
-                        end_time=end_time,
-                        location=location
-                    )
-                    
-                    schedules.append(schedule)
+                    # If no RRULE or no BYDAY found, use the initial day
+                    if not recurring_days:
+                        try:
+                            day = DayType(initial_day_name)
+                            schedule = Schedule(
+                                id=str(uuid.uuid4()),
+                                user_id=user_id,
+                                course_code=course_code,
+                                course_name=course_name,
+                                day=day,
+                                start_time=start_time,
+                                end_time=end_time,
+                                location=location
+                            )
+                            schedules.append(schedule)
+                        except ValueError:
+                            continue  # Skip invalid days
+                    else:
+                        # Create schedule for each recurring day
+                        for day_name in recurring_days:
+                            try:
+                                day = DayType(day_name)
+                                schedule = Schedule(
+                                    id=str(uuid.uuid4()),
+                                    user_id=user_id,
+                                    course_code=course_code,
+                                    course_name=course_name,
+                                    day=day,
+                                    start_time=start_time,
+                                    end_time=end_time,
+                                    location=location
+                                )
+                                schedules.append(schedule)
+                            except ValueError:
+                                continue  # Skip invalid days
             
             return schedules
             
@@ -299,6 +324,13 @@ class ICSParser:
         """Extract course code and name from event summary"""
         if not summary:
             return "UNKNOWN", "Unknown Course"
+        
+        # Try to match patterns like "Course Name :: CODE123 D" (:: separator format)
+        match = re.match(r'^(.+?)\s*::\s*(.+)$', summary.strip())
+        if match:
+            name = match.group(1).strip()
+            code = match.group(2).strip()
+            return code, name
         
         # Try to match patterns like "CS 151 - Introduction to Computer Science"
         match = re.match(r'^([A-Z]{2,4}\s*\d{3})\s*[-:]?\s*(.*)$', summary, re.IGNORECASE)
@@ -322,3 +354,66 @@ class ICSParser:
                 return potential_code, summary
         
         return summary[:10].upper(), summary
+    
+    def _parse_rrule_days(self, rrule) -> List[str]:
+        """Parse RRULE to extract BYDAY values and return list of day names"""
+        if not rrule:
+            return []
+        
+        # Mapping of ICS BYDAY abbreviations to full day names
+        day_mapping = {
+            'MO': 'monday',
+            'TU': 'tuesday', 
+            'WE': 'wednesday',
+            'TH': 'thursday',
+            'FR': 'friday',
+            'SA': 'saturday',
+            'SU': 'sunday'
+        }
+        
+        days = []
+        
+        try:
+            # Handle different possible RRULE formats
+            if hasattr(rrule, 'get'):
+                # rrule is a dict-like object
+                byday = rrule.get('BYDAY')
+            elif hasattr(rrule, 'to_ical'):
+                # rrule is an icalendar object, convert to string and parse
+                rrule_str = rrule.to_ical().decode('utf-8') if hasattr(rrule.to_ical(), 'decode') else str(rrule.to_ical())
+                byday = self._extract_byday_from_string(rrule_str)
+            else:
+                # rrule is already a string
+                rrule_str = str(rrule)
+                byday = self._extract_byday_from_string(rrule_str)
+            
+            if byday:
+                # Handle both single values and lists
+                if isinstance(byday, list):
+                    for day_code in byday:
+                        day_code = str(day_code).strip().upper()
+                        # Remove any numeric prefixes (like "1MO" -> "MO")
+                        day_code = re.sub(r'^\d+', '', day_code)
+                        if day_code in day_mapping:
+                            days.append(day_mapping[day_code])
+                else:
+                    # Single value or comma-separated string
+                    day_codes = str(byday).split(',')
+                    for day_code in day_codes:
+                        day_code = day_code.strip().upper()
+                        # Remove any numeric prefixes (like "1MO" -> "MO")
+                        day_code = re.sub(r'^\d+', '', day_code)
+                        if day_code in day_mapping:
+                            days.append(day_mapping[day_code])
+            
+        except Exception as e:
+            # If parsing fails, return empty list to fall back to initial day
+            pass
+        
+        return days
+    
+    def _extract_byday_from_string(self, rrule_str: str) -> Optional[str]:
+        """Extract BYDAY value from RRULE string"""
+        # Look for BYDAY=... pattern
+        match = re.search(r'BYDAY=([^;]+)', rrule_str.upper())
+        return match.group(1) if match else None

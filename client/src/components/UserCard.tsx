@@ -4,7 +4,7 @@ import StatusIndicator from "./StatusIndicator";
 import { User } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
-type StatusType = "studying" | "free" | "help" | "busy" | "tired" | "social";
+type StatusType = "studying" | "free" | "in_class" | "busy" | "tired" | "social";
 
 interface UserCardProps {
   user: Pick<User, "id" | "username" | "major" | "avatar">;

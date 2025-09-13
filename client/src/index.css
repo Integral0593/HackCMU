@@ -32,7 +32,7 @@
 
   --sidebar-border: 0 0% 92%;
 
-  --sidebar-primary: 250 100% 65%;
+  --sidebar-primary: 355 85% 55%;
 
   --sidebar-primary-foreground: 0 0% 100%;
 
@@ -40,7 +40,7 @@
 
   --sidebar-accent-foreground: 220 15% 25%;
 
-  --sidebar-ring: 250 100% 65%;
+  --sidebar-ring: 355 85% 55%;
 
   --popover: 0 0% 99%;
 
@@ -48,7 +48,7 @@
 
   --popover-border: 0 0% 93%;
 
-  --primary: 250 100% 65%;
+  --primary: 355 85% 55%;
 
   --primary-foreground: 0 0% 100%;
 
@@ -60,7 +60,7 @@
 
   --muted-foreground: 220 15% 50%;
 
-  --accent: 250 20% 96%;
+  --accent: 355 20% 96%;
 
   --accent-foreground: 220 15% 25%;
 
@@ -69,7 +69,7 @@
   --destructive-foreground: 0 0% 100%;
 
   --input: 0 0% 85%;
-  --ring: 250 100% 65%;
+  --ring: 355 85% 55%;
   --chart-1: 120 70% 50%;
   --chart-2: 200 90% 60%;
   --chart-3: 30 100% 60%;
@@ -122,89 +122,6 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-.dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
-
-  --opaque-button-border-intensity: 9;  /* In terms of percentages */
-
-  /* Backgrounds applied on top of other backgrounds when hovered/active */
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
-
-  --background: 220 25% 8%;
-
-  --foreground: 220 20% 85%;
-
-  --border: 220 25% 15%;
-
-  --card: 220 20% 12%;
-
-  --card-foreground: 220 20% 85%;
-
-  --card-border: 220 20% 18%;
-
-  --sidebar: 220 25% 10%;
-
-  --sidebar-foreground: 220 20% 85%;
-
-  --sidebar-border: 220 25% 16%;
-
-  --sidebar-primary: 250 80% 70%;
-
-  --sidebar-primary-foreground: 220 25% 8%;
-
-  --sidebar-accent: 220 20% 14%;
-
-  --sidebar-accent-foreground: 220 20% 85%;
-
-  --sidebar-ring: 250 80% 70%;
-
-  --popover: 220 20% 14%;
-
-  --popover-foreground: 220 20% 85%;
-
-  --popover-border: 220 20% 20%;
-
-  --primary: 250 80% 70%;
-
-  --primary-foreground: 220 25% 8%;
-
-  --secondary: 220 20% 16%;
-
-  --secondary-foreground: 220 20% 85%;
-
-  --muted: 220 20% 13%;
-
-  --muted-foreground: 220 20% 65%;
-
-  --accent: 250 15% 15%;
-
-  --accent-foreground: 220 20% 85%;
-
-  --destructive: 0 80% 60%;
-
-  --destructive-foreground: 0 0% 100%;
-
-  /* Used as the border around inputs. Dark mode: Should be a border that is light enough to have high contrast when rendered on a --card background. More contrast than standard --border */
-  --input: 220 20% 25%;
-  --ring: 250 80% 70%;
-  --chart-1: 120 70% 65%;
-  --chart-2: 200 90% 75%;
-  --chart-3: 30 100% 70%;
-  --chart-4: 280 60% 75%;
-  --chart-5: 320 70% 70%;
-
-  --shadow-2xs: 0px 1px 2px 0px hsl(220 25% 0% / 0.3);
-  --shadow-xs: 0px 1px 2px 0px hsl(220 25% 0% / 0.3);
-  --shadow-sm: 0px 1px 3px 0px hsl(220 25% 0% / 0.4), 0px 1px 2px -1px hsl(220 25% 0% / 0.4);
-  --shadow: 0px 1px 3px 0px hsl(220 25% 0% / 0.4), 0px 1px 2px -1px hsl(220 25% 0% / 0.4);
-  --shadow-md: 0px 4px 6px -1px hsl(220 25% 0% / 0.4), 0px 2px 4px -2px hsl(220 25% 0% / 0.4);
-  --shadow-lg: 0px 10px 15px -3px hsl(220 25% 0% / 0.4), 0px 4px 6px -4px hsl(220 25% 0% / 0.4);
-  --shadow-xl: 0px 20px 25px -5px hsl(220 25% 0% / 0.4), 0px 8px 10px -6px hsl(220 25% 0% / 0.4);
-  --shadow-2xl: 0px 25px 50px -12px hsl(220 25% 0% / 0.5);
-
-}
 
 @layer base {
   * {

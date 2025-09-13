@@ -29,9 +29,6 @@ export default function StudyPartnerCard({ partner, onConnect }: StudyPartnerCar
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-sm truncate">{partner.username}</h3>
-              <Badge variant="outline" className="text-xs">
-                {Math.round(partner.score)}
-              </Badge>
             </div>
             
             <p className="text-xs text-muted-foreground mb-2">{partner.major}</p>
