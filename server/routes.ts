@@ -5,12 +5,20 @@ import ical from "ical";
 import { WebSocketServer, WebSocket } from "ws";
 import cookieParser from "cookie-parser";
 import { storage } from "./storage";
+import { SECRET } from "./config";
 import { 
   insertScheduleSchema, 
   insertUserSchema, 
   insertChatSchema,
   insertMessageSchema,
+  registerUserSchema,
+  loginUserSchema,
+  updateUserProfileSchema,
+  addFriendSchema,
+  searchUsersSchema,
   type InsertSchedule,
+  type RegisterUser,
+  type LoginUser,
   type WebSocketMessage
 } from "@shared/schema";
 
@@ -98,10 +106,13 @@ interface AuthToken {
 }
 
 function generateAuthToken(userId: string): string {
+  const crypto = require('crypto');
   const timestamp = Date.now();
   const data = `${userId}:${timestamp}`;
-  // In production, use a proper HMAC signature with a secret key
-  const signature = Buffer.from(data + process.env.SESSION_SECRET).toString('base64');
+  
+  // Use HMAC-SHA256 for secure signatures with unified secret
+  const signature = crypto.createHmac('sha256', SECRET).update(data).digest('hex');
+  
   return Buffer.from(JSON.stringify({ userId, timestamp, signature })).toString('base64');
 }
 
@@ -115,9 +126,10 @@ function validateAuthToken(token: string): string | null {
       return null;
     }
     
-    // Verify signature
+    // Verify HMAC-SHA256 signature with unified secret
+    const crypto = require('crypto');
     const expectedData = `${userId}:${timestamp}`;
-    const expectedSignature = Buffer.from(expectedData + process.env.SESSION_SECRET).toString('base64');
+    const expectedSignature = crypto.createHmac('sha256', SECRET).update(expectedData).digest('hex');
     
     if (signature !== expectedSignature) {
       return null;
@@ -152,6 +164,12 @@ function getDayFromDate(date: Date): string {
 // Helper function to format time to HH:MM
 function formatTime(date: Date): string {
   return date.toTimeString().slice(0, 5);
+}
+
+// Helper function to convert RRULE weekday numbers to day names
+function convertWeekdayNumbers(byweekday: number[]): string[] {
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  return byweekday.map(num => dayNames[num]).filter(Boolean);
 }
 
 // Helper function to parse ICS file
@@ -208,14 +226,36 @@ function parseICSFile(buffer: Buffer): InsertSchedule[] {
         courseName = summary;
       }
 
+      // Extract days from RRULE if present
+      let days: string[] = [];
+      if (event.rrule && event.rrule.options && event.rrule.options.byweekday) {
+        days = convertWeekdayNumbers(event.rrule.options.byweekday);
+        console.log(`📅 [DEBUG] RRULE found for ${courseName}:`, {
+          byweekday: event.rrule.options.byweekday,
+          convertedDays: days
+        });
+      } else {
+        // Fallback to start date day
+        days = [getDayFromDate(startDate)];
+        console.log(`📅 [DEBUG] No RRULE for ${courseName}, using startDate day:`, days);
+      }
+
       const schedule: InsertSchedule = {
         courseCode: courseCode || 'TBD',
         courseName: courseName,
-        day: getDayFromDate(startDate) as any,
+        days: days as any,
         startTime: formatTime(startDate),
         endTime: formatTime(endDate),
         location: event.location || null
       };
+
+      console.log(`🔍 [DEBUG] Created schedule object for ${courseName}:`, {
+        courseCode: schedule.courseCode,
+        courseName: schedule.courseName,
+        days: schedule.days,
+        daysType: typeof schedule.days,
+        daysLength: schedule.days?.length
+      });
 
       schedules.push(schedule);
     }
@@ -269,6 +309,116 @@ function broadcastToUsers(userIds: string[], message: WebSocketMessage) {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Health check endpoint for HEAD /api requests
+  app.head('/api', (req, res) => {
+    res.status(200).end();
+  });
+  
+  app.get('/api', (req, res) => {
+    res.json({ 
+      status: 'ok', 
+      message: 'SlotSync API is running',
+      timestamp: new Date().toISOString()
+    });
+  });
+
+  // Authentication routes
+  
+  // Register new user
+  app.post('/api/auth/register', async (req, res) => {
+    try {
+      const validatedData = registerUserSchema.parse(req.body);
+      
+      // Register user through storage layer
+      const user = await storage.registerUser(validatedData);
+      
+      // Set session
+      req.session.user_id = user.id;
+      
+      res.json({
+        user,
+        message: 'Registration successful'
+      });
+    } catch (error: any) {
+      console.error('Registration error:', error);
+      
+      if (error.message === 'Username already exists') {
+        return res.status(409).json({ error: 'Username already exists' });
+      }
+      
+      res.status(400).json({ 
+        error: error.message || 'Registration failed'
+      });
+    }
+  });
+
+  // Login user
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const validatedData = loginUserSchema.parse(req.body);
+      
+      // Authenticate user through storage layer
+      const user = await storage.authenticateUser(validatedData.username, validatedData.password);
+      
+      if (!user) {
+        return res.status(401).json({ error: 'Invalid username or password' });
+      }
+      
+      // Set session
+      req.session.user_id = user.id;
+      
+      res.json({
+        user,
+        message: 'Login successful'
+      });
+    } catch (error: any) {
+      console.error('Login error:', error);
+      res.status(400).json({ 
+        error: error.message || 'Login failed'
+      });
+    }
+  });
+
+  // Logout user
+  app.post('/api/auth/logout', async (req, res) => {
+    try {
+      if (req.session) {
+        req.session.destroy((err) => {
+          if (err) {
+            console.error('Logout error:', err);
+            return res.status(500).json({ error: 'Logout failed' });
+          }
+          
+          res.clearCookie('session');
+          res.json({ message: 'Logged out successfully' });
+        });
+      } else {
+        res.json({ message: 'No active session' });
+      }
+    } catch (error: any) {
+      console.error('Logout error:', error);
+      res.status(500).json({ error: 'Logout failed' });
+    }
+  });
+
+  // Get current user
+  app.get('/api/auth/me', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const user = await storage.getUserById(authenticatedUserId);
+      
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+      
+      res.json({ user });
+    } catch (error: any) {
+      console.error('Get current user error:', error);
+      res.status(500).json({ error: 'Failed to get user information' });
+    }
+  });
+
   // SECURITY: Generate WebSocket authentication token endpoint
   app.post('/api/auth/ws-token', requireAuth, async (req, res) => {
     try {
@@ -376,6 +526,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Search users (MUST be before /api/users/:userId to avoid route conflict)
+  app.get('/api/users/search', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      console.log('Search users request:', { query: req.query, authenticatedUserId });
+      
+      // Validate query parameters with Zod
+      const validation = searchUsersSchema.safeParse(req.query);
+      if (!validation.success) {
+        console.log('Search validation failed:', validation.error.issues);
+        return res.status(400).json({ 
+          error: 'Invalid search parameters',
+          details: validation.error.issues
+        });
+      }
+      
+      const { q: query, limit: searchLimit } = validation.data;
+      console.log('Search params validated:', { query, limit: searchLimit });
+      
+      const searchResults = await storage.searchUsers(query, authenticatedUserId, searchLimit);
+      console.log('Search results:', searchResults.length, 'users found');
+      
+      res.json(searchResults);
+    } catch (error: any) {
+      console.error('Search users error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/users/:userId', async (req, res) => {
     try {
       const { userId } = req.params;
@@ -390,14 +570,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/users/:userId', async (req, res) => {
+  app.put('/api/users/:userId', requireAuth, async (req, res) => {
     try {
       const { userId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // SECURITY: Users can only update their own profile
+      if (userId !== authenticatedUserId) {
+        logWebSocket('error', 'Unauthorized profile update attempt', {
+          authenticatedUserId,
+          requestedUserId: userId
+        });
+        return res.status(403).json({ error: 'Cannot update other users\' profiles' });
+      }
+      
       const updateData = req.body;
       
-      // Validate update data using partial user schema
-      const partialUserSchema = insertUserSchema.partial();
-      const validatedData = partialUserSchema.parse(updateData);
+      // SECURITY: Use safe update schema that excludes password and other sensitive fields
+      // This prevents password updates through the general profile update endpoint
+      const validatedData = updateUserProfileSchema.parse(updateData);
       
       const updatedUser = await storage.updateUser(userId, validatedData);
       
@@ -610,6 +801,409 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Status and recommendation endpoints
+  
+  // Get current user status information
+  app.get('/api/status', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      console.log(`GET /api/status called for user: ${authenticatedUserId}`);
+      
+      // Get user's friends
+      const friends = await storage.getFriendsByUserId(authenticatedUserId);
+      console.log('Raw friends data:', friends.map(f => ({ 
+        id: f.id, 
+        userId: f.userId, 
+        friendId: f.friendId, 
+        status: f.status 
+      })));
+      
+      // Filter to confirmed friends only
+      const confirmedFriends = friends.filter(f => f.status === 'confirmed');
+      console.log('Confirmed friends count:', confirmedFriends.length);
+      
+      // Map to friend IDs, filtering out undefined values
+      const friendIds = confirmedFriends
+        .map(f => f.userId === authenticatedUserId ? f.friendId : f.userId)
+        .filter(Boolean);
+      
+      // Deduplicate friend IDs
+      const userIds = [...new Set(friendIds)];
+      
+      console.log(`Status endpoint: user ${authenticatedUserId} -> confirmed friends: ${confirmedFriends.length}, friendIds:`, userIds);
+      
+      // Get current time info
+      const now = new Date();
+      const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
+      const currentTime = now.toTimeString().slice(0, 5);
+      
+      const in_class = [];
+      const free = [];
+      
+      // Process each user (self + friends)
+      for (const userId of userIds) {
+        try {
+          const user = await storage.getUser(userId);
+          if (!user) continue;
+          
+          const userStatus = await storage.getUserStatus(userId);
+          const schedules = await storage.getSchedulesByUserId(userId);
+          
+          // Check if user is currently in class
+          let currentClass = null;
+          let nextClass = null;
+          
+          // Find current class
+          for (const schedule of schedules) {
+            if (schedule.days.includes(currentDay) && 
+                schedule.startTime <= currentTime && 
+                schedule.endTime >= currentTime) {
+              currentClass = `${schedule.courseCode}: ${schedule.courseName}`;
+              break;
+            }
+          }
+          
+          // Find next class today
+          const todaySchedules = schedules.filter(s => s.days.includes(currentDay));
+          const futureSchedules = todaySchedules.filter(s => s.startTime > currentTime);
+          if (futureSchedules.length > 0) {
+            const nextSchedule = futureSchedules.sort((a, b) => a.startTime.localeCompare(b.startTime))[0];
+            nextClass = `${nextSchedule.courseCode} @ ${nextSchedule.startTime}`;
+          }
+          
+          // Create status board user object
+          const statusUser = {
+            id: user.id,
+            username: user.username,
+            fullName: user.fullName,
+            major: user.major,
+            avatar: user.avatar,
+            manual_status: userStatus?.status || 'free',
+            current_class: currentClass,
+            next_class: nextClass,
+            custom_message: userStatus?.message || null
+          };
+          
+          // Categorize based on whether user is currently in class or not
+          // User is "in class" if:
+          // 1. They have a current class from their schedule, OR
+          // 2. Their manual status is 'studying' (indicating they're in class/studying)
+          const userManualStatus = userStatus?.status || 'free';
+          const isInClass = currentClass !== null || userManualStatus === 'studying';
+          
+          if (isInClass) {
+            in_class.push(statusUser);
+          } else {
+            free.push(statusUser);
+          }
+        } catch (userError) {
+          console.error(`Error processing user ${userId}:`, userError);
+          // Continue with other users even if one fails
+        }
+      }
+      
+      const statusData = {
+        now: now.toISOString(),
+        in_class,
+        free
+      };
+      
+      res.json(statusData);
+    } catch (error: any) {
+      console.error('Get status error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get study partner recommendations
+  app.get('/api/recommendations/:userId', requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // SECURITY: Users can only get their own recommendations
+      if (userId !== authenticatedUserId) {
+        return res.status(403).json({ error: 'Cannot access other users\' recommendations' });
+      }
+      
+      // Get smart recommendations using the new algorithm
+      const recommendations = await storage.getStudyPartnerRecommendations(userId, 10);
+      
+      console.log(`Generated ${recommendations.length} recommendations for user ${userId}`);
+      
+      res.json(recommendations);
+    } catch (error: any) {
+      console.error('Get recommendations error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Friends API Endpoints
+  
+  // Add friend
+  app.post('/api/friends', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // Validate request body with Zod
+      const validation = addFriendSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'Invalid friend data',
+          details: validation.error.issues
+        });
+      }
+      
+      const { friendId } = validation.data;
+      
+      if (friendId === authenticatedUserId) {
+        return res.status(400).json({ error: 'Cannot add yourself as a friend' });
+      }
+      
+      const newFriendship = await storage.addFriend(authenticatedUserId, friendId);
+      
+      res.json({
+        message: 'Friend added successfully',
+        friendship: newFriendship
+      });
+    } catch (error: any) {
+      console.error('Add friend error:', error);
+      if (error.message === 'Friendship already exists') {
+        return res.status(409).json({ error: error.message });
+      }
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get user's friends
+  app.get('/api/friends/:userId', requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // SECURITY: Users can only get their own friends list
+      if (userId !== authenticatedUserId) {
+        return res.status(403).json({ error: 'Cannot access other users\' friends list' });
+      }
+      
+      const friends = await storage.getFriends(userId);
+      
+      res.json(friends);
+    } catch (error: any) {
+      console.error('Get friends error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Remove friend
+  app.delete('/api/friends/:friendId', requireAuth, async (req, res) => {
+    try {
+      const { friendId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      if (!friendId) {
+        return res.status(400).json({ error: 'Friend ID is required' });
+      }
+      
+      if (friendId === authenticatedUserId) {
+        return res.status(400).json({ error: 'Cannot remove yourself as a friend' });
+      }
+      
+      const success = await storage.removeFriend(authenticatedUserId, friendId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Friendship not found' });
+      }
+      
+      res.json({
+        message: 'Friend removed successfully'
+      });
+    } catch (error: any) {
+      console.error('Remove friend error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get pending friend requests
+  app.get('/api/friends/requests', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const pendingRequests = await storage.getPendingFriendRequests(authenticatedUserId);
+      
+      res.json(pendingRequests);
+    } catch (error: any) {
+      console.error('Get pending friend requests error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Accept friend request
+  app.put('/api/friends/requests/:requestId/accept', requireAuth, async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      if (!requestId) {
+        return res.status(400).json({ error: 'Request ID is required' });
+      }
+      
+      const success = await storage.acceptFriendRequest(requestId, authenticatedUserId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Friend request not found or already processed' });
+      }
+      
+      res.json({
+        message: 'Friend request accepted successfully'
+      });
+    } catch (error: any) {
+      console.error('Accept friend request error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reject friend request
+  app.put('/api/friends/requests/:requestId/reject', requireAuth, async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      if (!requestId) {
+        return res.status(400).json({ error: 'Request ID is required' });
+      }
+      
+      const success = await storage.rejectFriendRequest(requestId, authenticatedUserId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Friend request not found' });
+      }
+      
+      res.json({
+        message: 'Friend request rejected successfully'
+      });
+    } catch (error: any) {
+      console.error('Reject friend request error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Update user manual status
+  app.put('/api/status/:userId', requireAuth, async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // SECURITY: Users can only update their own status
+      if (userId !== authenticatedUserId) {
+        return res.status(403).json({ error: 'Cannot update other users\' status' });
+      }
+      
+      const { status, message } = req.body;
+      
+      // Validate status against allowed values
+      const validStatuses = ["studying", "free", "in_class", "busy", "tired", "social"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status value' });
+      }
+      
+      // Store status update in database
+      await storage.updateUserStatus(userId, status, message);
+      
+      console.log('Status updated for user', userId, ':', status, message ? `with message: "${message}"` : '');
+      
+      res.json({ 
+        success: true, 
+        status, 
+        message: message || null,
+        updated_at: new Date().toISOString()
+      });
+    } catch (error: any) {
+      console.error('Update status error:', error);
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Test data insertion endpoint (for development/testing)
+  // SECURITY: Protected with authentication and environment checks
+  app.post('/api/test-data/insert', requireAuth, async (req, res) => {
+    try {
+      // SECURITY: Disable in production environment
+      if (process.env.NODE_ENV === 'production') {
+        logWebSocket('warn', 'Test data insert endpoint blocked in production', {
+          userId: (req as any).authenticatedUserId,
+          ip: req.ip
+        });
+        return res.status(403).json({ 
+          error: 'Test data endpoints are disabled in production' 
+        });
+      }
+      
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // Import the test data insertion function
+      const { insertTestData } = await import('./test-data');
+      
+      await insertTestData();
+      
+      logWebSocket('info', 'Test data inserted successfully', {
+        userId: authenticatedUserId,
+        action: 'insert_test_data'
+      });
+      
+      res.json({
+        success: true,
+        message: 'Test data inserted successfully'
+      });
+    } catch (error: any) {
+      console.error('Test data insertion error:', error);
+      res.status(500).json({ 
+        error: error.message,
+        message: 'Failed to insert test data'
+      });
+    }
+  });
+
+  // Clear test data endpoint (for cleanup)
+  // SECURITY: Protected with authentication and environment checks
+  app.delete('/api/test-data/clear', requireAuth, async (req, res) => {
+    try {
+      // SECURITY: Disable in production environment
+      if (process.env.NODE_ENV === 'production') {
+        logWebSocket('warn', 'Test data clear endpoint blocked in production', {
+          userId: (req as any).authenticatedUserId,
+          ip: req.ip
+        });
+        return res.status(403).json({ 
+          error: 'Test data endpoints are disabled in production' 
+        });
+      }
+      
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const { clearTestData } = await import('./test-data');
+      
+      await clearTestData();
+      
+      logWebSocket('info', 'Test data cleared successfully', {
+        userId: authenticatedUserId,
+        action: 'clear_test_data'
+      });
+      
+      res.json({
+        success: true,
+        message: 'Test data cleared successfully'
+      });
+    } catch (error: any) {
+      console.error('Test data clearing error:', error);
+      res.status(500).json({ 
+        error: error.message,
+        message: 'Failed to clear test data'
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   // Setup WebSocket server on /ws path
@@ -626,8 +1220,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     let isAuthenticated = false;
 
     ws.on('message', async (data) => {
+      let message: WebSocketMessage | undefined;
       try {
-        const message = JSON.parse(data.toString()) as WebSocketMessage;
+        message = JSON.parse(data.toString()) as WebSocketMessage;
+        
+        if (!message || !message.type) {
+          logWebSocket('error', 'Invalid message format - missing type', { message });
+          return;
+        }
         
         switch (message.type) {
           case 'auth':
@@ -866,11 +1466,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               // Get message to find sender
               const messages = await storage.getMessagesByChatId(message.data.chatId, 1);
               if (messages.length > 0) {
-                const messageToMark = messages.find(m => m.id === message.data.messageId);
+                const messageToMark = messages.find(m => m.id === message?.data?.messageId);
                 if (messageToMark) {
                   sendToUser(messageToMark.senderId, {
                     type: 'read_receipt',
-                    data: { messageId: message.data.messageId, readBy: userId }
+                    data: { messageId: message?.data?.messageId, readBy: userId }
                   });
                 }
               }
@@ -878,7 +1478,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             break;
 
           default:
-            console.log('Unknown message type:', message.type);
+            console.log('Unknown message type:', message?.type || 'undefined');
         }
       } catch (error: any) {
         logWebSocket('error', `WebSocket message processing error for user ${userId || 'anonymous'}`, {
