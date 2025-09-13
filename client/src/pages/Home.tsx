@@ -8,6 +8,7 @@ import StatusDisplay from "@/components/StatusDisplay";
 import ScheduleForm from "@/components/ScheduleForm";
 import StudyPartnerRecommendations from "@/components/StudyPartnerRecommendations";
 import UserDetailModal from "@/components/UserDetailModal";
+import ChatInterface from "@/components/ChatInterface";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -26,7 +27,7 @@ import {
   SearchUser,
   FriendWithUser
 } from "@shared/schema";
-import { Search, Users, UserPlus, UserX, BookOpen, Plus } from "lucide-react";
+import { Search, Users, UserPlus, UserX, BookOpen, Plus, MessageSquare } from "lucide-react";
 import logoImage from "@assets/logo_1757730069515.png";
 import dashboardIcon from "@assets/dashboard_icon_1757730011816.png";
 import scheduleIcon from "@assets/schedule_icon_1757730011819.png";
@@ -65,6 +66,10 @@ export default function Home() {
   const [partnerSearchQuery, setPartnerSearchQuery] = useState("");
   const [isAddFriendDialogOpen, setIsAddFriendDialogOpen] = useState(false);
   const [friendUsernameSearch, setFriendUsernameSearch] = useState("");
+  const [selectedFriend, setSelectedFriend] = useState<User | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [showChatUser, setShowChatUser] = useState<User | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const debouncedPartnerSearch = useDebounce(partnerSearchQuery, 300);
   const debouncedFriendSearch = useDebounce(friendUsernameSearch, 300);
 
@@ -254,8 +259,28 @@ export default function Home() {
     addFriendMutation.mutate(friendId);
   };
 
+  const handleSendMessage = (friendId: string) => {
+    // Find the friend to get their details
+    const friend = friends.find(f => f.friend.id === friendId);
+    if (friend) {
+      setShowChatUser(friend.friend as User);
+      setIsChatOpen(true);
+    }
+  };
+
+  const handleShowFriendDetail = (friend: User) => {
+    setSelectedFriend(friend);
+    setIsDetailModalOpen(true);
+  };
+
   const handleRemoveFriend = (friendId: string) => {
     removeFriendMutation.mutate(friendId);
+    setIsDetailModalOpen(false);
+  };
+
+  const handleCloseChat = () => {
+    setIsChatOpen(false);
+    setShowChatUser(null);
   };
 
   const isAddingFriend = addFriendMutation.isPending;
@@ -277,6 +302,7 @@ export default function Home() {
         password: '', // Not needed for modal display
         fullName: partner.fullName || null,
         major: partner.major,
+        grade: null,
         avatar: partner.avatar,
         dorm: null, // Not available in StudyPartner
         college: null,
@@ -318,6 +344,7 @@ export default function Home() {
         password: '', // Not needed for modal display
         fullName: clickedUser.fullName || null,
         major: clickedUser.major,
+        grade: null,
         avatar: clickedUser.avatar,
         dorm: null, // These fields aren't in the status response, so setting defaults
         college: null,
@@ -717,7 +744,11 @@ export default function Home() {
                     {friends.map((friend: FriendWithUser) => (
                       <div key={friend.id} className="border rounded-lg p-4 hover-elevate" data-testid={`friend-${friend.friend.id}`}>
                         <div className="flex items-start gap-3">
-                          <Avatar className="h-12 w-12">
+                          <Avatar 
+                            className="h-12 w-12 cursor-pointer hover-elevate" 
+                            onClick={() => handleShowFriendDetail(friend.friend as User)}
+                            data-testid={`friend-avatar-${friend.friend.id}`}
+                          >
                             {friend.friend.avatar && <AvatarImage src={friend.friend.avatar} alt={friend.friend.fullName || friend.friend.username} />}
                             <AvatarFallback>
                               {(friend.friend.fullName || friend.friend.username)
@@ -747,14 +778,12 @@ export default function Home() {
                             
                             <Button 
                               size="sm" 
-                              variant="destructive"
-                              onClick={() => handleRemoveFriend(friend.friend.id)}
-                              disabled={isRemovingFriend}
+                              onClick={() => handleSendMessage(friend.friend.id)}
                               className="w-full"
-                              data-testid={`remove-friend-${friend.friend.id}`}
+                              data-testid={`send-message-${friend.friend.id}`}
                             >
-                              <UserX className="h-3 w-3 mr-1" />
-                              {isRemovingFriend ? "Removing..." : "Remove Friend"}
+                              <MessageSquare className="h-3 w-3 mr-1" />
+                              Send Message
                             </Button>
                           </div>
                         </div>
@@ -794,6 +823,81 @@ export default function Home() {
         currentClass={selectedUser ? getUserStatusInfo(selectedUser.id)?.currentClass : undefined}
         nextClass={selectedUser ? getUserStatusInfo(selectedUser.id)?.nextClass : undefined}
       />
+
+      {/* Friend Detail Modal */}
+      {selectedFriend && (
+        <Dialog open={isDetailModalOpen} onOpenChange={() => setIsDetailModalOpen(false)}>
+          <DialogContent 
+            className="max-w-md mx-auto max-h-[90vh] overflow-y-auto"
+            data-testid="friend-detail-modal"
+          >
+            <DialogHeader className="pb-4">
+              <DialogTitle className="text-center">Friend Details</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-6">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <Avatar className="h-20 w-20 border-2 border-border">
+                  {selectedFriend.avatar && <AvatarImage src={selectedFriend.avatar} alt={selectedFriend.fullName || selectedFriend.username} />}
+                  <AvatarFallback className="text-lg font-semibold">
+                    {(selectedFriend.fullName || selectedFriend.username)
+                      .split(" ")
+                      .map(n => n[0])
+                      .join("")
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="space-y-2">
+                  <h2 className="text-xl font-semibold">{selectedFriend.fullName || selectedFriend.username}</h2>
+                  <p className="text-muted-foreground">{selectedFriend.major}</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <Button 
+                  className="w-full" 
+                  onClick={() => handleSendMessage(selectedFriend.id)}
+                  variant="outline"
+                >
+                  <MessageSquare className="h-4 w-4 mr-2" />
+                  Send Message
+                </Button>
+                
+                <Button 
+                  variant="destructive"
+                  onClick={() => handleRemoveFriend(selectedFriend.id)}
+                  disabled={isRemovingFriend}
+                  className="w-full"
+                >
+                  <UserX className="h-4 w-4 mr-2" />
+                  {isRemovingFriend ? "Removing..." : "Remove Friend"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Chat Modal */}
+      {isChatOpen && showChatUser && user && (
+        <Dialog open={isChatOpen} onOpenChange={handleCloseChat}>
+          <DialogContent className="max-w-2xl max-h-[80vh]">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5" />
+                Chat with {showChatUser.fullName || showChatUser.username}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[60vh] overflow-hidden">
+              <ChatInterface
+                currentUserId={user.id}
+                otherUser={showChatUser}
+                onClose={handleCloseChat}
+                className="w-full"
+              />
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

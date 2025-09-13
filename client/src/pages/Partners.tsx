@@ -513,12 +513,12 @@ export default function Partners() {
       const chatUser: User = {
         id: user.id,
         username: user.username,
-        fullName: user.fullName,
+        fullName: user.fullName || null,
         major: user.major,
-        avatar: user.avatar,
-        dorm: user.dorm,
-        college: user.college,
-        bio: user.bio,
+        avatar: user.avatar || null,
+        dorm: user.dorm || null,
+        college: user.college || null,
+        bio: user.bio || null,
         password: '', // Not needed for chat
         grade: null,
         gender: null
