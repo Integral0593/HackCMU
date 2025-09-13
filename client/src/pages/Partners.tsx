@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Search, Users, UserPlus, UserX, BookOpen, Plus } from "lucide-react";
-import type { SearchUser, FriendWithUser, PublicUser } from "@shared/schema";
+import ChatInterface from "@/components/ChatInterface";
+import { Search, Users, UserPlus, UserX, BookOpen, Plus, MessageSquare, User as UserIcon, GraduationCap, Home } from "lucide-react";
+import type { SearchUser, FriendWithUser, PublicUser, User } from "@shared/schema";
 
 function useDebounce(value: string, delay: number) {
   const [debouncedValue, setDebouncedValue] = useState(value);
@@ -29,10 +30,181 @@ function useDebounce(value: string, delay: number) {
   return debouncedValue;
 }
 
-function SearchUserCard({ user, onAddFriend, isAdding }: {
+function UserDetailModal({ isOpen, onClose, user, currentUserId, onRemoveFriend, isRemoving }: {
+  isOpen: boolean;
+  onClose: () => void;
+  user: User | null;
+  currentUserId: string;
+  onRemoveFriend: (friendId: string) => void;
+  isRemoving: boolean;
+}) {
+  const [showChat, setShowChat] = useState(false);
+  
+  if (!user) return null;
+
+  const displayName = user.fullName || user.username;
+  const initials = displayName
+    .split(" ")
+    .map(n => n[0])
+    .join("")
+    .toUpperCase();
+
+  const handleStartChat = () => {
+    setShowChat(true);
+  };
+
+  const handleCloseChat = () => {
+    setShowChat(false);
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={() => onClose()}>
+      <DialogContent 
+        className="max-w-md mx-auto max-h-[90vh] overflow-y-auto"
+        data-testid="friend-detail-modal"
+      >
+        <DialogHeader className="pb-4">
+          <DialogTitle className="text-center">Friend Details</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-6">
+          {/* User Avatar and Basic Info */}
+          <div className="flex flex-col items-center text-center space-y-4">
+            <Avatar className="h-20 w-20 border-2 border-border" data-testid="friend-avatar-large">
+              {user.avatar && (
+                <AvatarImage 
+                  src={user.avatar} 
+                  alt={displayName} 
+                  data-testid="friend-avatar-image"
+                />
+              )}
+              <AvatarFallback className="text-lg font-semibold">
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+
+            <div className="space-y-2">
+              <h2 className="text-xl font-semibold" data-testid="friend-name">
+                {displayName}
+              </h2>
+              <p className="text-muted-foreground" data-testid="friend-major">
+                {user.major}
+              </p>
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Personal Information */}
+          <div className="space-y-4">
+            <h3 className="font-medium flex items-center gap-2">
+              <UserIcon className="h-4 w-4" />
+              Personal Information
+            </h3>
+
+            <div className="grid gap-3">
+              {/* College */}
+              {user.college && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    College
+                  </span>
+                  <span className="text-sm font-medium" data-testid="friend-college">
+                    {user.college}
+                  </span>
+                </div>
+              )}
+
+              {/* Dorm */}
+              {user.dorm && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground flex items-center gap-2">
+                    <Home className="h-4 w-4" />
+                    Dorm
+                  </span>
+                  <span className="text-sm font-medium" data-testid="friend-dorm">
+                    {user.dorm}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bio Section */}
+          {user.bio && (
+            <>
+              <Separator />
+              <div className="space-y-3">
+                <h3 className="font-medium flex items-center gap-2">
+                  <MessageSquare className="h-4 w-4" />
+                  About
+                </h3>
+                <Card>
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-muted-foreground leading-relaxed" data-testid="friend-bio">
+                      {user.bio}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            </>
+          )}
+
+          {/* Empty state message for minimal profiles */}
+          {!user.bio && !user.college && !user.dorm && (
+            <div className="text-center py-6">
+              <p className="text-sm text-muted-foreground">
+                This friend hasn't shared additional details yet.
+              </p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="space-y-3">
+            {!showChat ? (
+              <Button 
+                className="w-full" 
+                onClick={handleStartChat}
+                variant="outline"
+                data-testid="button-start-chat"
+              >
+                <MessageSquare className="h-4 w-4 mr-2" />
+                Send Message
+              </Button>
+            ) : (
+              <div className="space-y-4">
+                <ChatInterface
+                  currentUserId={currentUserId}
+                  otherUser={user}
+                  onClose={handleCloseChat}
+                  className="w-full"
+                />
+              </div>
+            )}
+            
+            <Button 
+              variant="destructive"
+              onClick={() => onRemoveFriend(user.id)}
+              disabled={isRemoving}
+              className="w-full"
+              data-testid="button-remove-friend-modal"
+            >
+              <UserX className="h-4 w-4 mr-2" />
+              {isRemoving ? "Removing..." : "Remove Friend"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function SearchUserCard({ user, onAddFriend, isAdding, onConnect }: {
   user: SearchUser;
   onAddFriend: (userId: string) => void;
   isAdding: boolean;
+  onConnect?: (userId: string) => void;
 }) {
   const displayName = user.fullName || user.username;
   const initials = displayName
@@ -92,16 +264,28 @@ function SearchUserCard({ user, onAddFriend, isAdding }: {
             )}
             
             {!user.isFriend && (
-              <Button 
-                size="sm" 
-                onClick={() => onAddFriend(user.id)}
-                disabled={isAdding}
-                className="w-full"
-                data-testid={`add-friend-${user.id}`}
-              >
-                <UserPlus className="h-3 w-3 mr-1" />
-                {isAdding ? "Adding..." : "Add Friend"}
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={() => onConnect?.(user.id)}
+                  className="flex-1"
+                  data-testid={`connect-${user.id}`}
+                >
+                  <MessageSquare className="h-3 w-3 mr-1" />
+                  Connect
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={() => onAddFriend(user.id)}
+                  disabled={isAdding}
+                  className="flex-1"
+                  data-testid={`add-friend-${user.id}`}
+                >
+                  <UserPlus className="h-3 w-3 mr-1" />
+                  {isAdding ? "Adding..." : "Add Friend"}
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -110,10 +294,10 @@ function SearchUserCard({ user, onAddFriend, isAdding }: {
   );
 }
 
-function FriendCard({ friend, onRemoveFriend, isRemoving }: {
+function FriendCard({ friend, onSendMessage, onShowDetail }: {
   friend: FriendWithUser;
-  onRemoveFriend: (friendId: string) => void;
-  isRemoving: boolean;
+  onSendMessage: (friendId: string) => void;
+  onShowDetail: (friend: User) => void;
 }) {
   const displayName = friend.friend.fullName || friend.friend.username;
   const initials = displayName
@@ -126,7 +310,11 @@ function FriendCard({ friend, onRemoveFriend, isRemoving }: {
     <Card className="hover-elevate" data-testid={`friend-${friend.friend.id}`}>
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
-          <Avatar className="h-12 w-12">
+          <Avatar 
+            className="h-12 w-12 cursor-pointer hover-elevate" 
+            onClick={() => onShowDetail(friend.friend as User)}
+            data-testid={`friend-avatar-${friend.friend.id}`}
+          >
             {friend.friend.avatar && <AvatarImage src={friend.friend.avatar} alt={displayName} />}
             <AvatarFallback>{initials}</AvatarFallback>
           </Avatar>
@@ -163,14 +351,12 @@ function FriendCard({ friend, onRemoveFriend, isRemoving }: {
             
             <Button 
               size="sm" 
-              variant="destructive"
-              onClick={() => onRemoveFriend(friend.friend.id)}
-              disabled={isRemoving}
+              onClick={() => onSendMessage(friend.friend.id)}
               className="w-full"
-              data-testid={`remove-friend-${friend.friend.id}`}
+              data-testid={`send-message-${friend.friend.id}`}
             >
-              <UserX className="h-3 w-3 mr-1" />
-              {isRemoving ? "Removing..." : "Remove Friend"}
+              <MessageSquare className="h-3 w-3 mr-1" />
+              Send Message
             </Button>
           </div>
         </div>
@@ -183,6 +369,10 @@ export default function Partners() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddFriendDialogOpen, setIsAddFriendDialogOpen] = useState(false);
   const [friendUsernameSearch, setFriendUsernameSearch] = useState("");
+  const [selectedFriend, setSelectedFriend] = useState<User | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [showChatUser, setShowChatUser] = useState<User | null>(null);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const debouncedSearch = useDebounce(searchQuery, 300);
   const debouncedFriendSearch = useDebounce(friendUsernameSearch, 300);
   const { toast } = useToast();
@@ -298,6 +488,49 @@ export default function Partners() {
 
   const handleRemoveFriend = (friendId: string) => {
     removeFriendMutation.mutate(friendId);
+    setIsDetailModalOpen(false);
+  };
+
+  const handleShowFriendDetail = (friend: User) => {
+    setSelectedFriend(friend);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleSendMessage = (friendId: string) => {
+    // Find the friend to get their details
+    const friend = friends.find(f => f.friend.id === friendId);
+    if (friend) {
+      setShowChatUser(friend.friend as User);
+      setIsChatOpen(true);
+    }
+  };
+
+  const handleConnect = (userId: string) => {
+    // Find the user to get their details for chat
+    const user = searchResults.find(u => u.id === userId);
+    if (user) {
+      // Convert SearchUser to User format for ChatInterface
+      const chatUser: User = {
+        id: user.id,
+        username: user.username,
+        fullName: user.fullName,
+        major: user.major,
+        avatar: user.avatar,
+        dorm: user.dorm,
+        college: user.college,
+        bio: user.bio,
+        password: '', // Not needed for chat
+        grade: null,
+        gender: null
+      };
+      setShowChatUser(chatUser);
+      setIsChatOpen(true);
+    }
+  };
+
+  const handleCloseChat = () => {
+    setIsChatOpen(false);
+    setShowChatUser(null);
   };
 
   const isAddingFriend = addFriendMutation.isPending;
@@ -469,6 +702,7 @@ export default function Partners() {
                     user={user}
                     onAddFriend={handleAddFriend}
                     isAdding={isAddingFriend}
+                    onConnect={handleConnect}
                   />
                 ))}
               </div>
@@ -507,8 +741,8 @@ export default function Partners() {
                   <FriendCard
                     key={friend.id}
                     friend={friend}
-                    onRemoveFriend={handleRemoveFriend}
-                    isRemoving={isRemovingFriend}
+                    onSendMessage={handleSendMessage}
+                    onShowDetail={handleShowFriendDetail}
                   />
                 ))}
               </div>
@@ -539,6 +773,38 @@ export default function Partners() {
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Friend Detail Modal */}
+      <UserDetailModal
+        isOpen={isDetailModalOpen}
+        onClose={() => setIsDetailModalOpen(false)}
+        user={selectedFriend}
+        currentUserId={currentUser?.id || ''}
+        onRemoveFriend={handleRemoveFriend}
+        isRemoving={isRemovingFriend}
+      />
+
+      {/* Chat Modal */}
+      <Dialog open={isChatOpen} onOpenChange={() => setIsChatOpen(false)}>
+        <DialogContent className="max-w-2xl max-h-[80vh]" data-testid="chat-modal">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5" />
+              Chat with {showChatUser?.fullName || showChatUser?.username}
+            </DialogTitle>
+          </DialogHeader>
+          {showChatUser && currentUser && (
+            <div className="max-h-[60vh] overflow-hidden">
+              <ChatInterface
+                currentUserId={currentUser.id}
+                otherUser={showChatUser}
+                onClose={handleCloseChat}
+                className="w-full"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

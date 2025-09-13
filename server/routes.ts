@@ -808,30 +808,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const authenticatedUserId = (req as any).authenticatedUserId;
       
-      console.log(`GET /api/status called for user: ${authenticatedUserId}`);
-      
       // Get user's friends
       const friends = await storage.getFriendsByUserId(authenticatedUserId);
-      console.log('Raw friends data:', friends.map(f => ({ 
-        id: f.id, 
-        userId: f.userId, 
-        friendId: f.friendId, 
-        status: f.status 
-      })));
+      const friendIds = friends.map(friendship => 
+        friendship.userId1 === authenticatedUserId ? friendship.userId2 : friendship.userId1
+      );
       
-      // Filter to confirmed friends only
-      const confirmedFriends = friends.filter(f => f.status === 'confirmed');
-      console.log('Confirmed friends count:', confirmedFriends.length);
-      
-      // Map to friend IDs, filtering out undefined values
-      const friendIds = confirmedFriends
-        .map(f => f.userId === authenticatedUserId ? f.friendId : f.userId)
-        .filter(Boolean);
-      
-      // Deduplicate friend IDs
-      const userIds = [...new Set(friendIds)];
-      
-      console.log(`Status endpoint: user ${authenticatedUserId} -> confirmed friends: ${confirmedFriends.length}, friendIds:`, userIds);
+      // Include only friends, not the authenticated user themselves
+      const userIds = friendIds;
       
       // Get current time info
       const now = new Date();
@@ -885,14 +869,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             custom_message: userStatus?.message || null
           };
           
-          // Categorize based on whether user is currently in class or not
-          // User is "in class" if:
-          // 1. They have a current class from their schedule, OR
-          // 2. Their manual status is 'studying' (indicating they're in class/studying)
+          // Categorize based on manual status: "in_class" status -> in_class, all others -> free/available
           const userManualStatus = userStatus?.status || 'free';
-          const isInClass = currentClass !== null || userManualStatus === 'studying';
-          
-          if (isInClass) {
+          if (userManualStatus === 'in_class') {
             in_class.push(statusUser);
           } else {
             free.push(statusUser);
