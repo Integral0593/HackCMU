@@ -45,7 +45,7 @@ export default function UserCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-sm truncate">{user.username}</h3>
-            <StatusIndicator status={status} size="default" showIcon={true} showLabel={false} />
+            <StatusIndicator status={status} size="default" showIcon={true} showLabel={true} />
           </div>
           
           <p className="text-xs text-muted-foreground truncate">{user.major}</p>
