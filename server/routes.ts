@@ -166,6 +166,12 @@ function formatTime(date: Date): string {
   return date.toTimeString().slice(0, 5);
 }
 
+// Helper function to convert RRULE weekday numbers to day names
+function convertWeekdayNumbers(byweekday: number[]): string[] {
+  const dayNames = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
+  return byweekday.map(num => dayNames[num]).filter(Boolean);
+}
+
 // Helper function to parse ICS file
 function parseICSFile(buffer: Buffer): InsertSchedule[] {
   const icsData = ical.parseICS(buffer.toString());
@@ -220,14 +226,36 @@ function parseICSFile(buffer: Buffer): InsertSchedule[] {
         courseName = summary;
       }
 
+      // Extract days from RRULE if present
+      let days: string[] = [];
+      if (event.rrule && event.rrule.options && event.rrule.options.byweekday) {
+        days = convertWeekdayNumbers(event.rrule.options.byweekday);
+        console.log(`📅 [DEBUG] RRULE found for ${courseName}:`, {
+          byweekday: event.rrule.options.byweekday,
+          convertedDays: days
+        });
+      } else {
+        // Fallback to start date day
+        days = [getDayFromDate(startDate)];
+        console.log(`📅 [DEBUG] No RRULE for ${courseName}, using startDate day:`, days);
+      }
+
       const schedule: InsertSchedule = {
         courseCode: courseCode || 'TBD',
         courseName: courseName,
-        day: getDayFromDate(startDate) as any,
+        days: days as any,
         startTime: formatTime(startDate),
         endTime: formatTime(endDate),
         location: event.location || null
       };
+
+      console.log(`🔍 [DEBUG] Created schedule object for ${courseName}:`, {
+        courseCode: schedule.courseCode,
+        courseName: schedule.courseName,
+        days: schedule.days,
+        daysType: typeof schedule.days,
+        daysLength: schedule.days?.length
+      });
 
       schedules.push(schedule);
     }
