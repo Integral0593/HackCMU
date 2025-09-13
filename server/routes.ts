@@ -885,18 +885,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
             custom_message: userStatus?.message || null
           };
           
-          // Categorize based on whether user is currently in class or not
-          // User is "in class" if:
-          // 1. They have a current class from their schedule, OR
-          // 2. Their manual status is 'studying' (indicating they're in class/studying)
+          // Categorize based on user status
+          // "In Class" - only users with 'in_class' status or actually in a scheduled class
+          // "Available" - users with studying/free/tired/social status
+          // "Busy" users are excluded from both lists
           const userManualStatus = userStatus?.status || 'free';
-          const isInClass = currentClass !== null || userManualStatus === 'studying';
           
-          if (isInClass) {
+          // Update manual status to 'in_class' if user is currently in a scheduled class
+          if (currentClass !== null && userManualStatus === 'free') {
+            statusUser.manual_status = 'in_class';
+          }
+          
+          // Categorize based on status
+          if (statusUser.manual_status === 'in_class' || currentClass !== null) {
             in_class.push(statusUser);
-          } else {
+          } else if (statusUser.manual_status !== 'busy') {
+            // Include all statuses except 'busy' in available list
+            // This includes: studying, free, tired, social
             free.push(statusUser);
           }
+          // Users with 'busy' status are not shown in either list
         } catch (userError) {
           console.error(`Error processing user ${userId}:`, userError);
           // Continue with other users even if one fails
