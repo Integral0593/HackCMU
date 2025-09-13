@@ -7,8 +7,7 @@ A one-page H5 + Flask app that shows who's **in class vs free right now** and re
 
 ## 🎯 Inspiration
 
-Students often want to study *now* but can't easily find classmates who are free at the same time. We focused on the **on-campus context** (schedules, majors, common locations) so recommendations feel natural and timely rather than artificial.
-
+With thousands of students on campus, it's surprisingly difficult to connect with peers—especially for first-years who are still building their social networks. Yet social connections are crucial: you'll inevitably encounter group projects, collaborative assignments, and study sessions where having the right study partners makes all the difference. SlotSync bridges this gap by helping students find classmates who share their courses and are available to study together right now, fostering meaningful academic friendships and enhancing campus social life through shared learning experiences.
 ## 🛠 What it does
 
 * **Live status board**: "📚 In Class" and "✅ Free Now," auto-refreshing every 30 seconds.
@@ -82,8 +81,8 @@ python app.py
 ## 👥 Team
 
 * **Sine** – Frontend – https://github.com/sinewave0201
-* **Tabris** – Backend – https://github.com/psychovia
-* **Vera** – Algorithm – https://github.com/Integral0593
+* **Psychovia** – Backend – https://github.com/psychovia
+* **InterpreterCE** – Algorithm – https://github.com/Integral0593
 
 ## 🙏 Acknowledgments
 
