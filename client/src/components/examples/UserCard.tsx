@@ -1,21 +1,21 @@
 import UserCard from '../UserCard'
 
 export default function UserCardExample() {
-  // todo: remove mock functionality
-  const mockUser = {
-    id: "1",
-    username: "Alice Chen",
-    major: "Computer Science",
-    avatar: undefined
+  // Clean state - no mock data
+  const placeholderUser = {
+    id: "placeholder",
+    username: "Sample User",
+    major: "Sample Major",
+    avatar: null
   };
 
   return (
     <div className="max-w-sm p-4">
       <UserCard 
-        user={mockUser}
+        user={placeholderUser}
         status="studying"
-        currentClass="CS 151"
-        nextClass="Math 201 @ 2:00 PM"
+        currentClass="Sample Class"
+        nextClass="Next Class"
         onClick={() => console.log('User card clicked')}
       />
     </div>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation, Link } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,14 +11,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Upload, User as UserIcon, Edit3, Loader2 } from "lucide-react";
-import { User, insertUserSchema, type InsertUser, genderEnum } from "@shared/schema";
+import { updateUserProfileSchema, genderEnum, type UpdateUserProfile, type PublicUser } from "@shared/schema";
 import { z } from "zod";
 import { apiRequest } from "@/lib/queryClient";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/contexts/AuthContext";
 
-const profileSchema = insertUserSchema.extend({
-  username: z.string().min(1, "Name is required"),
+// Use the safe profile schema that excludes password fields
+const profileSchema = updateUserProfileSchema.extend({
   major: z.string().min(1, "Major is required"),
 });
 
@@ -36,39 +37,22 @@ function validateGender(gender: unknown): z.infer<typeof genderEnum> | undefined
 export default function Profile() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   
-  // User state - get from localStorage
-  const [user, setUser] = useState<User | null>(() => {
-    const storedUser = localStorage.getItem('slotsync-user');
-    if (storedUser) {
-      try {
-        const parsed = JSON.parse(storedUser);
-        // Validate gender field to ensure type safety
-        if (parsed && typeof parsed === 'object') {
-          return {
-            ...parsed,
-            gender: validateGender(parsed.gender)
-          } as User;
-        }
-        return parsed;
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
+  // Use AuthContext for user state management
+  const { user, isAuthenticated, isLoading, refetchUser } = useAuth();
 
-  // Redirect unauthenticated users in useEffect to avoid render-time side effects
+  // Redirect unauthenticated users
   useEffect(() => {
-    if (!user) {
-      setLocation("/");
+    if (!isLoading && !isAuthenticated) {
+      setLocation("/login");
     }
-  }, [user, setLocation]);
+  }, [isAuthenticated, isLoading, setLocation]);
 
-  // React Query mutation for updating profile
+  // React Query mutation for updating profile - using secure profile schema
   const updateProfileMutation = useMutation({
     mutationFn: async (data: ProfileData) => {
       if (!user) throw new Error("No user found");
@@ -81,23 +65,24 @@ export default function Profile() {
         avatarUrl = previewUrl;
       }
       
-      const updateData: Partial<InsertUser> = {
-        username: data.username,
+      const updateData: UpdateUserProfile = {
+        fullName: data.fullName?.trim() ? data.fullName.trim() : null,
         major: data.major,
         avatar: avatarUrl,
-        dorm: data.dorm,
-        college: data.college,
+        dorm: data.dorm?.trim() ? data.dorm.trim() : null,
+        college: data.college?.trim() ? data.college.trim() : null,
         gender: data.gender,
-        bio: data.bio
+        bio: data.bio?.trim() ? data.bio.trim() : null
       };
       
       const response = await apiRequest("PUT", `/api/users/${user.id}`, updateData);
-      return response.json();
+      return await response.json();
     },
-    onSuccess: (updatedUser: User) => {
-      // Update local state and localStorage with server response
-      setUser(updatedUser);
-      localStorage.setItem('slotsync-user', JSON.stringify(updatedUser));
+    onSuccess: (updatedUser: PublicUser) => {
+      // Refetch user data from AuthContext to update global state
+      refetchUser();
+      // Invalidate auth queries to refresh user data
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
       setIsEditing(false);
       setPreviewUrl(null);
       setAvatarFile(null);
@@ -120,7 +105,7 @@ export default function Profile() {
   const form = useForm<ProfileData>({
     resolver: zodResolver(profileSchema),
     defaultValues: {
-      username: user?.username || "",
+      fullName: user?.fullName || "",
       major: user?.major || "",
       avatar: user?.avatar || null,
       dorm: user?.dorm || "",
@@ -134,7 +119,7 @@ export default function Profile() {
   useEffect(() => {
     if (user) {
       form.reset({
-        username: user.username || "",
+        fullName: user.fullName || "",
         major: user.major || "",
         avatar: user.avatar || null,
         dorm: user.dorm || "",
@@ -145,7 +130,8 @@ export default function Profile() {
     }
   }, [user, form]);
 
-  const userInitials = user?.username
+  const displayName = user?.fullName || user?.username || "User";
+  const userInitials = displayName
     ?.split(" ")
     .map(n => n[0])
     .join("")
@@ -185,11 +171,17 @@ export default function Profile() {
     updateProfileMutation.mutate(data);
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('slotsync-user');
-    setLocation("/");
-    console.log('User logged out from profile');
+  const { logout } = useAuth();
+  
+  const handleLogout = async () => {
+    try {
+      await logout();
+      // AuthContext handles redirect and state cleanup
+    } catch (error) {
+      console.error('Logout error:', error);
+      // If logout fails, still redirect for safety
+      setLocation("/login");
+    }
   };
 
   // Show loading or return null while redirecting
@@ -270,8 +262,13 @@ export default function Profile() {
                     <div className="space-y-4">
                       <div>
                         <h2 className="text-xl sm:text-2xl font-semibold" data-testid="text-username">
-                          {user.username}
+                          {user.fullName || user.username}
                         </h2>
+                        {user.fullName && (
+                          <p className="text-sm text-muted-foreground" data-testid="text-username-fallback">
+                            @{user.username}
+                          </p>
+                        )}
                         <p className="text-muted-foreground" data-testid="text-major">
                           {user.major}
                         </p>
@@ -331,15 +328,16 @@ export default function Profile() {
                       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
                         <FormField
                           control={form.control}
-                          name="username"
+                          name="fullName"
                           render={({ field }) => (
                             <FormItem>
-                              <FormLabel>Full Name</FormLabel>
+                              <FormLabel>Full Name (Optional)</FormLabel>
                               <FormControl>
                                 <Input
                                   placeholder="Enter your full name"
                                   {...field}
-                                  data-testid="input-profile-username"
+                                  value={field.value || ""}
+                                  data-testid="input-profile-fullname"
                                 />
                               </FormControl>
                             </FormItem>

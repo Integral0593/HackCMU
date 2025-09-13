@@ -4,6 +4,17 @@
 
 A campus study partner matching platform that connects students based on shared classes and real-time status. The application allows students to upload their course schedules, set their current study status, and find suitable study partners through intelligent recommendations. Built with a hybrid architecture featuring Flask backend services and React frontend components, the system enables real-time collaboration and schedule-based matching.
 
+## Recent Changes
+
+### Two-Way Friend Approval System (September 2025)
+- **Enhanced Friend Request Workflow**: Implemented two-way friend approval system replacing immediate friend confirmation
+- **Pending Request Management**: Friend requests now create pending status requiring recipient acceptance
+- **Notifications Page**: Added comprehensive notifications page at `/notifications` route displaying pending friend requests
+- **Interactive Request Actions**: Users can accept or reject friend requests with immediate UI feedback
+- **Notification Badge**: Header now includes Bell icon with red badge showing count of pending requests
+- **API Security**: Added authorization checks ensuring only recipients can accept/reject their own friend requests
+- **Database Schema Updates**: Modified friend status to default to "pending" instead of "confirmed"
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

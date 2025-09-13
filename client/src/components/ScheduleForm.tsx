@@ -7,9 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { insertScheduleSchema, InsertSchedule, Schedule } from "@shared/schema";
-import { Plus, X, Clock, Upload } from "lucide-react";
+import { insertScheduleSchema, InsertSchedule, Schedule, dayEnum } from "@shared/schema";
+import { Plus, X, Clock, Upload, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { extractCourseCode, getCourseColor, formatCourseName } from "@/utils/courseUtils";
 
 interface ScheduleFormProps {
   schedules: Schedule[];
@@ -20,17 +22,18 @@ interface ScheduleFormProps {
 }
 
 const days = [
-  { value: "monday", label: "Monday" },
-  { value: "tuesday", label: "Tuesday" },
-  { value: "wednesday", label: "Wednesday" },
-  { value: "thursday", label: "Thursday" },
-  { value: "friday", label: "Friday" },
-  { value: "saturday", label: "Saturday" },
-  { value: "sunday", label: "Sunday" },
+  { value: "monday" as const, label: "Monday" },
+  { value: "tuesday" as const, label: "Tuesday" },
+  { value: "wednesday" as const, label: "Wednesday" },
+  { value: "thursday" as const, label: "Thursday" },
+  { value: "friday" as const, label: "Friday" },
+  { value: "saturday" as const, label: "Saturday" },
+  { value: "sunday" as const, label: "Sunday" },
 ];
 
 export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedule, onUploadICS, userId }: ScheduleFormProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isEventFormOpen, setIsEventFormOpen] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
@@ -40,7 +43,19 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
     defaultValues: {
       courseCode: "",
       courseName: "",
-      day: "monday" as const,
+      days: [],
+      startTime: "",
+      endTime: "",
+      location: "",
+    },
+  });
+
+  const eventForm = useForm<InsertSchedule>({
+    resolver: zodResolver(insertScheduleSchema),
+    defaultValues: {
+      courseCode: "EVENT",
+      courseName: "",
+      days: [],
       startTime: "",
       endTime: "",
       location: "",
@@ -52,6 +67,15 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
     form.reset();
     setIsFormOpen(false);
     console.log('Schedule added:', data);
+  };
+
+  const onEventSubmit = (data: InsertSchedule) => {
+    // Mark this as an event by prefixing course code with "EVENT-"
+    const eventData = { ...data, courseCode: `EVENT-${data.courseName.replace(/\s+/g, '-').toUpperCase()}` };
+    onAddSchedule(eventData);
+    eventForm.reset();
+    setIsEventFormOpen(false);
+    console.log('Event added:', eventData);
   };
 
   const formatTime = (time: string) => {
@@ -144,10 +168,20 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
               size="sm" 
               onClick={() => setIsFormOpen(!isFormOpen)}
               data-testid="add-schedule-button"
-              className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
+              className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px] px-2 sm:px-3"
             >
               <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
               Add Course
+            </Button>
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={() => setIsEventFormOpen(!isEventFormOpen)}
+              data-testid="add-event-button"
+              className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px] px-2 sm:px-3"
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+              Add Event
             </Button>
           </div>
         </CardTitle>
@@ -179,11 +213,23 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
               >
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="text-xs">{schedule.courseCode}</Badge>
-                    <span className="font-medium text-sm">{schedule.courseName}</span>
+                    {(() => {
+                      // 优先使用已解析的courseCode，然后尝试从courseName提取，最后使用备用值
+                      const courseCode = schedule.courseCode || extractCourseCode(schedule.courseName) || "N/A";
+                      const colorClass = getCourseColor(courseCode);
+                      return (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs font-semibold ${colorClass}`}
+                        >
+                          {courseCode}
+                        </Badge>
+                      );
+                    })()}
+                    <span className="font-medium text-sm">{formatCourseName(schedule.courseName)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {schedule.day.charAt(0).toUpperCase() + schedule.day.slice(1)} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
+                    {schedule.days.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(", ")} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
                     {schedule.location && ` • ${schedule.location}`}
                   </p>
                 </div>
@@ -249,24 +295,38 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
 
                   <FormField
                     control={form.control}
-                    name="day"
+                    name="days"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Day</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-day">
-                              <SelectValue placeholder="Select a day" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {days.map((day) => (
-                              <SelectItem key={day.value} value={day.value}>
+                        <FormLabel className="flex items-center gap-2">
+                          <Calendar className="h-4 w-4" />
+                          Days (Select multiple)
+                        </FormLabel>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2" data-testid="days-selection">
+                          {days.map((day) => (
+                            <div key={day.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={day.value}
+                                checked={field.value?.includes(day.value) || false}
+                                onCheckedChange={(checked) => {
+                                  const currentValue = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...currentValue, day.value]);
+                                  } else {
+                                    field.onChange(currentValue.filter((v) => v !== day.value));
+                                  }
+                                }}
+                                data-testid={`checkbox-${day.value}`}
+                              />
+                              <label 
+                                htmlFor={day.value}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
                                 {day.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                              </label>
+                            </div>
+                          ))}
+                        </div>
                         <FormMessage />
                       </FormItem>
                     )}
@@ -346,6 +406,157 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                       data-testid="cancel-schedule"
                       className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
                     >
+                      Cancel
+                    </Button>
+                  </div>
+                </form>
+              </Form>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Event Form */}
+        {isEventFormOpen && (
+          <Card className="mt-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
+                <span className="text-base sm:text-lg">Add New Event</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Form {...eventForm}>
+                <form onSubmit={eventForm.handleSubmit(onEventSubmit)} className="space-y-3 sm:space-y-4">
+                  <FormField
+                    control={eventForm.control}
+                    name="courseName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Event Name</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Study Group, Meeting, etc." 
+                            {...field}
+                            data-testid="input-event-name"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={eventForm.control}
+                    name="days"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Days</FormLabel>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {days.map((day) => (
+                            <div key={day.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`event-${day.value}`}
+                                checked={field.value?.includes(day.value as any) || false}
+                                onCheckedChange={(checked) => {
+                                  const currentValue = field.value || [];
+                                  if (checked) {
+                                    field.onChange([...currentValue, day.value]);
+                                  } else {
+                                    field.onChange(currentValue.filter((v) => v !== day.value));
+                                  }
+                                }}
+                                data-testid={`event-checkbox-${day.value}`}
+                              />
+                              <label 
+                                htmlFor={`event-${day.value}`}
+                                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                              >
+                                {day.label}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                    <FormField
+                      control={eventForm.control}
+                      name="startTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Start Time</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time" 
+                              {...field}
+                              data-testid="input-event-start-time"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <FormField
+                      control={eventForm.control}
+                      name="endTime"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>End Time</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="time" 
+                              {...field}
+                              data-testid="input-event-end-time"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <FormField
+                    control={eventForm.control}
+                    name="location"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Location (Optional)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            placeholder="Library, Coffee Shop, etc." 
+                            {...field}
+                            value={field.value || ""}
+                            data-testid="input-event-location"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <div className="flex flex-col xs:flex-row gap-2">
+                    <Button 
+                      type="submit" 
+                      size="sm"
+                      data-testid="submit-event"
+                      className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
+                    >
+                      <Plus className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                      Add Event
+                    </Button>
+                    <Button 
+                      type="button"
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setIsEventFormOpen(false)}
+                      data-testid="cancel-event"
+                      className="w-full xs:w-auto text-xs sm:text-sm min-h-[40px] sm:min-h-[32px]"
+                    >
+                      <X className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                       Cancel
                     </Button>
                   </div>

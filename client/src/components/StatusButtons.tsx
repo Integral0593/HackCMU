@@ -50,11 +50,13 @@ export default function StatusButtons({
             )}
             data-testid={`status-button-${status}`}
           >
-            <img 
-              src={config.icon} 
-              alt={config.label}
-              className="h-4 w-4" 
-            />
+            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-background/20">
+              <img 
+                src={config.icon} 
+                alt={config.label}
+                className="h-5 w-5 object-contain" 
+              />
+            </div>
             <span className="text-sm font-medium">{config.label}</span>
           </Button>
         );

@@ -22,7 +22,16 @@ export function useWebSocket(): UseWebSocketReturn {
 
   const getWebSocketUrl = () => {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = window.location.host;
+    let host = window.location.host;
+    
+    // Handle cases where port might be undefined or missing
+    if (!host || host.includes('undefined')) {
+      // Fallback to current host with explicit port
+      const hostname = window.location.hostname || 'localhost';
+      const port = window.location.port || '5000';
+      host = `${hostname}:${port}`;
+    }
+    
     return `${protocol}//${host}/ws`;
   };
 

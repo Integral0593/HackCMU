@@ -210,12 +210,16 @@ export default function StatusDisplay({
       <CardContent className="pt-6">
         {/* Large centered status image */}
         <div className="flex flex-col items-center mb-4 sm:mb-6">
-          <div className="mb-3 sm:mb-4">
-            <img 
-              src={currentConfig.icon} 
-              alt={currentConfig.label}
-              className="h-20 w-20 sm:h-28 sm:w-28 md:h-32 md:w-32 object-contain" 
-            />
+          <div className="mb-3 sm:mb-4 relative">
+            {/* Enhanced background for status dog */}
+            <div className="absolute inset-0 bg-gradient-to-br from-background/5 to-background/10 rounded-full blur-sm transform scale-110"></div>
+            <div className="relative bg-background/20 rounded-full p-4 sm:p-6 md:p-8 border border-border/20 shadow-lg">
+              <img 
+                src={currentConfig.icon} 
+                alt={currentConfig.label}
+                className="h-24 w-24 sm:h-36 sm:w-36 md:h-44 md:w-44 lg:h-48 lg:w-48 object-contain drop-shadow-sm" 
+              />
+            </div>
           </div>
           
           {/* Status message */}
@@ -286,7 +290,7 @@ export default function StatusDisplay({
                   <img 
                     src={config.icon} 
                     alt={config.label}
-                    className="h-3 w-3 sm:h-4 sm:w-4" 
+                    className="h-4 w-4 sm:h-5 sm:w-5" 
                   />
                   <span className="text-xs sm:text-sm font-medium">{config.label}</span>
                 </Button>

@@ -1,8 +1,8 @@
-Update user profile information and preferences
+Update test data with realistic 5-digit course codes for better matching
 
-Refactor the user profile component to allow for editing of user details and preferences, including bio, major, and availability status.
+Replace placeholder course codes with actual 5-digit CMU course codes in test data to align with user feedback and improve algorithm accuracy.
 
 Replit-Commit-Author: Agent
 Replit-Commit-Session-Id: a01c814c-1746-404e-a473-fbe4d7501018
 Replit-Commit-Checkpoint-Type: full_checkpoint
-Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/a9dfb115-e642-4401-8be3-a80648ab78a2/a01c814c-1746-404e-a473-fbe4d7501018/UGyKTD7
+Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/a9dfb115-e642-4401-8be3-a80648ab78a2/a01c814c-1746-404e-a473-fbe4d7501018/Yf3lMR6

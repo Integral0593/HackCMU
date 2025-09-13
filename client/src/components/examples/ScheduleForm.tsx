@@ -3,25 +3,15 @@ import ScheduleForm from '../ScheduleForm'
 import { Schedule, InsertSchedule } from '@shared/schema'
 
 export default function ScheduleFormExample() {
-  // todo: remove mock functionality
-  const [schedules, setSchedules] = useState<Schedule[]>([
-    {
-      id: "1",
-      userId: "user1",
-      courseCode: "CS 151",
-      courseName: "Introduction to Computer Science",
-      day: "monday",
-      startTime: "10:30",
-      endTime: "11:50",
-      location: "UC Building"
-    }
-  ]);
+  // Clean state - no mock data
+  const [schedules, setSchedules] = useState<Schedule[]>([]);
 
   const handleAddSchedule = (newSchedule: InsertSchedule) => {
     const schedule: Schedule = {
       ...newSchedule,
       id: Math.random().toString(),
-      userId: "user1"
+      userId: "placeholder-user",
+      location: newSchedule.location ?? null
     };
     setSchedules(prev => [...prev, schedule]);
   };
