@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Login - SlotSync{% endblock %}
+
+{% block content %}
+<div class="min-h-[60vh] flex items-center justify-center">
+    <div class="max-w-md w-full space-y-8">
+        <div class="text-center">
+            <h2 class="text-3xl font-bold text-gray-900">Welcome to SlotSync</h2>
+            <p class="mt-2 text-sm text-gray-600">Find study partners based on your course schedule</p>
+        </div>
+        
+        <div class="bg-white py-8 px-6 shadow-md rounded-lg border">
+            <form method="POST" class="space-y-6">
+                <div>
+                    <label for="username" class="block text-sm font-medium text-gray-700">Full Name</label>
+                    <input type="text" 
+                           id="username" 
+                           name="username" 
+                           required 
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                           placeholder="Alice Chen"
+                           data-testid="input-username">
+                </div>
+                
+                <div>
+                    <label for="major" class="block text-sm font-medium text-gray-700">Major</label>
+                    <input type="text" 
+                           id="major" 
+                           name="major" 
+                           required 
+                           class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm" 
+                           placeholder="Computer Science"
+                           data-testid="input-major">
+                </div>
+                
+                <div>
+                    <button type="submit" 
+                            class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                            data-testid="submit-login">
+                        Get Started
+                    </button>
+                </div>
+            </form>
+            
+            <div class="mt-6 pt-6 border-t border-gray-200">
+                <div class="text-center">
+                    <p class="text-xs text-gray-500">
+                        SlotSync helps you find study partners by matching your course schedules and availability
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

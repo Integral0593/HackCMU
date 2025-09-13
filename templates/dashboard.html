@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - SlotSync{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Status Control -->
+    <div class="bg-white rounded-lg shadow-sm border p-6">
+        <h3 class="text-lg font-semibold text-gray-900 mb-4">Your Current Status</h3>
+        <p class="text-sm text-gray-600 mb-4">Let others know what you're up to</p>
+        
+        <div class="grid grid-cols-2 md:grid-cols-3 gap-3" id="status-buttons">
+            {% set current_status = user_status.value if user_status else 'free' %}
+            {% set statuses = [
+                ('studying', 'Studying', 'M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253'),
+                ('free', 'Free', 'M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z'),
+                ('help', 'Can Help', 'M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z'),
+                ('busy', 'Busy', 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z'),
+                ('tired', 'Tired', 'M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z'),
+                ('social', 'Social', 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z')
+            ] %}
+            
+            {% for status, label, icon_path in statuses %}
+                <button hx-post="{{ url_for('status') }}" 
+                        hx-vals='{"status": "{{ status }}"}'
+                        hx-target="#status-buttons"
+                        hx-swap="outerHTML"
+                        class="flex items-center justify-center space-x-2 px-4 py-3 rounded-md border text-sm font-medium transition-colors
+                               {% if current_status == status %}
+                               bg-primary-600 text-white border-primary-600
+                               {% else %}
+                               bg-white text-gray-700 border-gray-300 hover:bg-gray-50
+                               {% endif %}"
+                        data-testid="status-button-{{ status }}">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ icon_path }}"></path>
+                    </svg>
+                    <span>{{ label }}</span>
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Status Board -->
+    <div id="status-board" 
+         hx-get="{{ url_for('api_status_board') }}" 
+         hx-trigger="load, refresh"
+         hx-target="this"
+         hx-swap="innerHTML">
+        <div class="grid md:grid-cols-2 gap-6">
+            <!-- In Class -->
+            <div class="bg-white rounded-lg shadow-sm border">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                            <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                            </svg>
+                            <span>In Class</span>
+                        </h3>
+                        <button hx-get="{{ url_for('api_status_board') }}" 
+                                hx-target="#status-board"
+                                hx-swap="innerHTML"
+                                class="text-sm text-gray-500 hover:text-gray-700"
+                                data-testid="refresh-status">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3" data-testid="in-class-list">
+                        <!-- Loading placeholder -->
+                        <div class="animate-pulse space-y-3">
+                            {% for i in range(3) %}
+                            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                                <div class="w-10 h-10 bg-gray-200 rounded-full"></div>
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                                    <div class="h-3 bg-gray-200 rounded w-16"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Available -->
+            <div class="bg-white rounded-lg shadow-sm border">
+                <div class="px-6 py-4 border-b border-gray-200">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-status-free" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>Available</span>
+                    </h3>
+                </div>
+                <div class="p-6">
+                    <div class="space-y-3" data-testid="free-list">
+                        <!-- Loading placeholder -->
+                        <div class="animate-pulse space-y-3">
+                            {% for i in range(3) %}
+                            <div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md">
+                                <div class="w-10 h-10 bg-gray-200 rounded-full"></div>
+                                <div class="flex-1">
+                                    <div class="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                                    <div class="h-3 bg-gray-200 rounded w-16"></div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<template id="status-board-template">
+    <div class="grid md:grid-cols-2 gap-6">
+        <!-- In Class -->
+        <div class="bg-white rounded-lg shadow-sm border">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                        <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <span>In Class (<span data-in-class-count>0</span>)</span>
+                    </h3>
+                    <div class="flex items-center space-x-2 text-xs text-gray-500">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <span data-last-updated></span>
+                    </div>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3" data-testid="in-class-list" data-in-class-users>
+                    <p class="text-sm text-gray-500 text-center py-8">No one is currently in class</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Available -->
+        <div class="bg-white rounded-lg shadow-sm border">
+            <div class="px-6 py-4 border-b border-gray-200">
+                <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                    <svg class="w-5 h-5 text-status-free" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                    </svg>
+                    <span>Available (<span data-free-count>0</span>)</span>
+                </h3>
+            </div>
+            <div class="p-6">
+                <div class="space-y-3" data-testid="free-list" data-free-users>
+                    <p class="text-sm text-gray-500 text-center py-8">No one is currently available</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.body.addEventListener('htmx:beforeSwap', function(evt) {
+    // Handle status board updates
+    if (evt.target.id === 'status-board') {
+        try {
+            const data = JSON.parse(evt.detail.xhr.responseText);
+            const template = document.getElementById('status-board-template');
+            const clone = template.content.cloneNode(true);
+            
+            // Update timestamp
+            const now = new Date(data.now);
+            const timeStr = now.toLocaleTimeString('en-US', {hour: 'numeric', minute: '2-digit', hour12: true});
+            clone.querySelector('[data-last-updated]').textContent = `Updated at ${timeStr}`;
+            
+            // Update counts
+            clone.querySelector('[data-in-class-count]').textContent = data.in_class.length;
+            clone.querySelector('[data-free-count]').textContent = data.free.length;
+            
+            // Update in-class users
+            const inClassContainer = clone.querySelector('[data-in-class-users]');
+            if (data.in_class.length === 0) {
+                inClassContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No one is currently in class</p>';
+            } else {
+                inClassContainer.innerHTML = data.in_class.map(user => 
+                    `<div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md hover-elevate cursor-pointer" data-testid="user-card-${user.id}">
+                        <div class="w-10 h-10 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            ${user.username[0].toUpperCase()}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm font-medium text-gray-900">${user.username}</span>
+                                <span class="text-xs px-2 py-1 rounded-full text-white status-${user.manual_status}">${user.manual_status.charAt(0).toUpperCase() + user.manual_status.slice(1)}</span>
+                            </div>
+                            <p class="text-xs text-gray-500">${user.major}</p>
+                            <p class="text-xs text-primary-600 font-medium">In ${user.current_class}</p>
+                        </div>
+                    </div>`
+                ).join('');
+            }
+            
+            // Update free users
+            const freeContainer = clone.querySelector('[data-free-users]');
+            if (data.free.length === 0) {
+                freeContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-8">No one is currently available</p>';
+            } else {
+                freeContainer.innerHTML = data.free.map(user => 
+                    `<div class="flex items-center space-x-3 p-3 bg-gray-50 rounded-md hover-elevate cursor-pointer" data-testid="user-card-${user.id}">
+                        <div class="w-10 h-10 bg-primary-500 text-white rounded-full flex items-center justify-center text-sm font-medium">
+                            ${user.username[0].toUpperCase()}
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-sm font-medium text-gray-900">${user.username}</span>
+                                <span class="text-xs px-2 py-1 rounded-full text-white status-${user.manual_status}">${user.manual_status.charAt(0).toUpperCase() + user.manual_status.slice(1)}</span>
+                            </div>
+                            <p class="text-xs text-gray-500">${user.major}</p>
+                            ${user.next_class ? `<p class="text-xs text-gray-500">Next: ${user.next_class}</p>` : ''}
+                        </div>
+                    </div>`
+                ).join('');
+            }
+            
+            // Replace content
+            evt.detail.target.innerHTML = clone.querySelector('div').outerHTML;
+            evt.detail.shouldSwap = false; // Prevent default swap
+        } catch (e) {
+            console.error('Error parsing status board data:', e);
+        }
+    }
+});
+</script>
+{% endblock %}

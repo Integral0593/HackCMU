@@ -1,0 +1,222 @@
+{% extends "base.html" %}
+
+{% block title %}Study Partners - SlotSync{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Study Partners</h1>
+            <p class="text-sm text-gray-600">Find classmates to study with based on shared courses</p>
+        </div>
+        <button hx-get="{{ url_for('api_recommendations') }}" 
+                hx-target="#recommendations-list"
+                hx-swap="innerHTML"
+                class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 text-sm font-medium"
+                data-testid="refresh-recommendations">
+            <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+            </svg>
+            Refresh
+        </button>
+    </div>
+
+    <!-- Study partner recommendations -->
+    <div class="bg-white rounded-lg shadow-sm border" data-testid="recommendations-card">
+        <div class="px-6 py-4 border-b border-gray-200">
+            <h3 class="text-lg font-semibold text-gray-900 flex items-center space-x-2">
+                <svg class="w-5 h-5 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                </svg>
+                <span>Recommended Partners ({{ recommendations|length }})</span>
+            </h3>
+        </div>
+        
+        <div class="p-6">
+            <div id="recommendations-list" class="space-y-4">
+                {% if recommendations %}
+                    {% for partner in recommendations %}
+                        <div class="border border-gray-200 rounded-lg p-4 hover-elevate" data-testid="study-partner-{{ partner.id }}">
+                            <div class="flex items-start space-x-4">
+                                <div class="w-12 h-12 bg-primary-500 text-white rounded-full flex items-center justify-center text-lg font-medium">
+                                    {{ partner.username[0].upper() }}
+                                </div>
+                                
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center justify-between">
+                                        <div class="flex items-center space-x-2">
+                                            <h4 class="text-sm font-semibold text-gray-900">{{ partner.username }}</h4>
+                                            <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800">
+                                                {{ partner.score }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    
+                                    <p class="text-xs text-gray-500 mb-2">{{ partner.major }}</p>
+                                    
+                                    {% if partner.shared_classes %}
+                                        <div class="flex items-center space-x-1 mb-2">
+                                            <svg class="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                            </svg>
+                                            <div class="flex flex-wrap gap-1">
+                                                {% for course in partner.shared_classes %}
+                                                    <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">
+                                                        {{ course }}
+                                                    </span>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+                                    
+                                    {% if partner.current_class %}
+                                        <p class="text-xs text-primary-600 font-medium mb-1">
+                                            Currently in {{ partner.current_class }}
+                                        </p>
+                                    {% endif %}
+                                    
+                                    {% if partner.next_class %}
+                                        <p class="text-xs text-gray-500 mb-2">
+                                            Next: {{ partner.next_class }}
+                                        </p>
+                                    {% endif %}
+                                    
+                                    <p class="text-xs text-gray-700 mb-3">{{ partner.reason }}</p>
+                                    
+                                    <button onclick="connectWithPartner('{{ partner.id }}', '{{ partner.username }}')"
+                                            class="w-full flex items-center justify-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700"
+                                            data-testid="connect-{{ partner.id }}">
+                                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                        </svg>
+                                        Connect
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="text-center py-12">
+                        <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Study Partners Found</h3>
+                        <p class="text-gray-600 mb-4">
+                            Add more courses to your schedule to find study partners with shared classes
+                        </p>
+                        <a href="{{ url_for('schedule_page') }}" 
+                           class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Add Courses
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Help section -->
+    <div class="bg-blue-50 border border-blue-200 rounded-lg p-6">
+        <div class="flex items-start space-x-3">
+            <svg class="w-5 h-5 text-blue-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+            <div>
+                <h3 class="text-sm font-medium text-blue-900">How does partner matching work?</h3>
+                <div class="mt-2 text-sm text-blue-800">
+                    <p>We match you with study partners based on:</p>
+                    <ul class="list-disc ml-5 mt-1 space-y-1">
+                        <li>Shared courses in your schedule</li>
+                        <li>Similar majors and academic interests</li>
+                        <li>Compatible availability and status</li>
+                        <li>Recent activity and engagement</li>
+                    </ul>
+                    <p class="mt-2">The higher the compatibility score, the better the match!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function connectWithPartner(partnerId, partnerName) {
+    // For now, just show an alert - in a real app this would open a chat or contact form
+    alert(`Connecting with ${partnerName}! In a full implementation, this would open a chat or send a connection request.`);
+    console.log('Connect clicked for partner:', partnerId);
+}
+
+// Handle dynamic recommendation updates
+document.body.addEventListener('htmx:beforeSwap', function(evt) {
+    if (evt.target.id === 'recommendations-list') {
+        try {
+            const recommendations = JSON.parse(evt.detail.xhr.responseText);
+            
+            if (recommendations.length === 0) {
+                evt.detail.target.innerHTML = `
+                    <div class="text-center py-12">
+                        <svg class="w-12 h-12 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                        </svg>
+                        <h3 class="text-lg font-medium text-gray-900 mb-2">No Study Partners Found</h3>
+                        <p class="text-gray-600 mb-4">Add more courses to your schedule to find study partners with shared classes</p>
+                        <a href="{{ url_for('schedule_page') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-primary-700 bg-primary-100 hover:bg-primary-200">
+                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Add Courses
+                        </a>
+                    </div>
+                `;
+            } else {
+                evt.detail.target.innerHTML = recommendations.map(partner => `
+                    <div class="border border-gray-200 rounded-lg p-4 hover-elevate" data-testid="study-partner-${partner.id}">
+                        <div class="flex items-start space-x-4">
+                            <div class="w-12 h-12 bg-primary-500 text-white rounded-full flex items-center justify-center text-lg font-medium">
+                                ${partner.username[0].toUpperCase()}
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center space-x-2">
+                                        <h4 class="text-sm font-semibold text-gray-900">${partner.username}</h4>
+                                        <span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-primary-100 text-primary-800">${partner.score}</span>
+                                    </div>
+                                </div>
+                                <p class="text-xs text-gray-500 mb-2">${partner.major}</p>
+                                ${partner.shared_classes.length ? `
+                                    <div class="flex items-center space-x-1 mb-2">
+                                        <svg class="w-3 h-3 text-primary-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path>
+                                        </svg>
+                                        <div class="flex flex-wrap gap-1">
+                                            ${partner.shared_classes.map(course => `<span class="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">${course}</span>`).join('')}
+                                        </div>
+                                    </div>
+                                ` : ''}
+                                ${partner.current_class ? `<p class="text-xs text-primary-600 font-medium mb-1">Currently in ${partner.current_class}</p>` : ''}
+                                ${partner.next_class ? `<p class="text-xs text-gray-500 mb-2">Next: ${partner.next_class}</p>` : ''}
+                                <p class="text-xs text-gray-700 mb-3">${partner.reason}</p>
+                                <button onclick="connectWithPartner('${partner.id}', '${partner.username}')" class="w-full flex items-center justify-center px-3 py-2 border border-transparent text-xs font-medium rounded-md text-white bg-primary-600 hover:bg-primary-700" data-testid="connect-${partner.id}">
+                                    <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path>
+                                    </svg>
+                                    Connect
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            evt.detail.shouldSwap = false; // Prevent default swap since we handled it
+        } catch (e) {
+            console.error('Error parsing recommendations data:', e);
+        }
+    }
+});
+</script>
+{% endblock %}

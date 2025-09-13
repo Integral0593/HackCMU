@@ -1,0 +1,7 @@
+0000000000000000000000000000000000000000 e7bf622b8bbc33c1de28b78fce614e2a3490ed87 intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757723657 +0000	commit (initial): Initial commit
+e7bf622b8bbc33c1de28b78fce614e2a3490ed87 fd2a813e58b35e4f93dc0fe270d340d0feec5d5d intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757724051 +0000	commit: Add foundational UI components and page structure for campus study partner matching
+fd2a813e58b35e4f93dc0fe270d340d0feec5d5d eb1f665c3ecad6c1bfed494e783f496a4db8fd26 intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757725272 +0000	commit: Add ICS file upload and rename project to SlotSync
+eb1f665c3ecad6c1bfed494e783f496a4db8fd26 7bb2381ef44da837382eebdfb98fd9ef380f524c intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757725637 +0000	commit: Update server port and add project documentation
+7bb2381ef44da837382eebdfb98fd9ef380f524c a71376c62d10e5211c0a36233e7a2af0541a5006 intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757725658 +0000	commit: Add functionality to match students based on their course schedules and real-time availability
+a71376c62d10e5211c0a36233e7a2af0541a5006 e07a7057d1105b7c9650725a9512091d8e6a7f35 intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757725854 +0000	commit: Change the application's port number to 5000
+e07a7057d1105b7c9650725a9512091d8e6a7f35 f33e30c3dd698deb56b02ec296760d5c6bee97f2 intepreterC <47536756-intepreterC@users.noreply.replit.com> 1757725977 +0000	commit: Fix app crashing issue by handling missing avatar data
