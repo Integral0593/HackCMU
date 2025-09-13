@@ -79,15 +79,11 @@ python app.py
 # (Optional) Frontend is served from /static/index.html by Flask
 ```
 
-## 📱 Screenshots
-
-*Add 2–3 screenshots or GIFs here (status board, add schedule, recommendations).*
-
 ## 👥 Team
 
-* **Sine** – Frontend (H5) – https://github.com/sinewave0201
-* **Tabris** – Backend (Flask) – https://github.com/psychovia
-* **Vera** – Algorithm (Matching) – https://github.com/Integral0593
+* **Sine** – Frontend – https://github.com/sinewave0201
+* **Tabris** – Backend – https://github.com/psychovia
+* **Vera** – Algorithm – https://github.com/Integral0593
 
 ## 🙏 Acknowledgments
 
