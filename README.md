@@ -1,95 +1,62 @@
-# SlotSync
-*Built at HackCMU 2025*
+SlotSync
+Built with modern web technologies
 
-## 🚀 Overview
+🚀 Overview A campus study partner matching platform that connects students based on shared classes and real-time status. Upload your course schedule, set your study status, and discover compatible study partners through intelligent recommendations—optimized for the campus context. It nails the essential MVP: find study partners who share your classes and are available right now.
 
-A one-page H5 + Flask app that shows who's **in class vs free right now** and recommends **study partners** from shared classes—optimized for the campus context. It nails the ultra-simple MVP: a single page that just works.
+🎯 Inspiration With thousands of students on campus, it's surprisingly difficult to connect with peers—especially for first-years who are still building their social networks. Yet social connections are crucial: you'll inevitably encounter group projects, collaborative assignments, and study sessions where having the right study partners makes all the difference. SlotSync bridges this gap by helping students find classmates who share their courses and are available to study together right now.
 
-## 🎯 Inspiration
+🛠 What it does
 
-With thousands of students on campus, it's surprisingly difficult to connect with peers—especially for first-years who are still building their social networks. Yet social connections are crucial: you'll inevitably encounter group projects, collaborative assignments, and study sessions where having the right study partners makes all the difference. SlotSync bridges this gap by helping students find classmates who share their courses and are available to study together right now, fostering meaningful academic friendships and enhancing campus social life through shared learning experiences.
-## 🛠 What it does
+Live status board: "📚 In Class" and "✅ Free Now," with real-time status detection
+One-tap manual status: free / studying / help / busy / tired / social
+Schedule input: Upload ICS files or manually add courses (day + time range)
+Smart matching: Same-class classmates who are currently free, ranked with explainable reasons
+Friend network: Two-way friend approval system with notifications
+Real-time chat: Instant messaging with study partners
+Endpoints: POST /api/schedules/upload, GET /api/status, POST /api/status/update, GET /api/recommendations
+⚡ How we built it Tech Stack:
 
-* **Live status board**: "📚 In Class" and "✅ Free Now," auto-refreshing every 30 seconds.
-* **One-tap manual status**: `free / studying / help / busy / tired / social`.
-* **Schedule input**: add or replace your courses (day + time range).
-* **Match (study partner)**: same-class classmates who are **currently free**, ranked with simple, explainable reasons.
-* **Endpoints**: `POST /add_schedule`, `GET /current_status`, `POST /update_status`, `GET /recommendations`.
+Frontend: React + TypeScript, Wouter routing, shadcn/ui components, Tailwind CSS
+Backend: Node.js + Express.js, PostgreSQL + Drizzle ORM
+Real-time: WebSocket integration for live messaging
+File Processing: ICS parser with RRULE support for recurring events
+Development: Vite build system, TypeScript across the stack
+Deployment: Replit for instant online access
+We built a modern, type-safe full-stack application with React frontend and Express backend. The architecture prioritizes real-time updates, intelligent matching algorithms, and seamless schedule integration. PostgreSQL provides reliable data persistence while WebSockets enable instant communication between study partners.
 
-## ⚡ How we built it
+🎨 Design Mobile-first responsive design with clean status cards, intuitive schedule upload, and clear recommendation cards showing shared classes and compatibility scores. Dog-themed branding elements add friendly campus appeal. Dark mode support and accessibility-first components ensure great experience across all devices and preferences.
 
-**Tech Stack:**
-- Frontend: HTML/CSS/JS/TS (single H5 page)
-- Backend: Python/Flask
-- Database: In-memory (MVP), optional JSON files for persistence
-- APIs: — (none required for MVP)
-- Other tools: GitHub
+💪 Challenges we ran into
 
-We intentionally kept the architecture tiny for a **24h demo**: H5 served by Flask, minimal endpoints, and in-memory data for speed. This follows our plan to use **HTML/CSS/JS + Python Flask + JSON files** so we can iterate quickly and still upgrade to JSON persistence later.
+ICS parsing complexity: Handling RRULE recurring events and converting weekday formats
+Real-time synchronization: Coordinating WebSocket authentication with Express sessions
+Status intelligence: Balancing automatic schedule detection with manual status overrides
+Type safety: Maintaining end-to-end TypeScript coverage across frontend and backend
+Friend request flow: Implementing two-way approval system with immediate UI feedback
+🏆 Accomplishments that we're proud of
 
-## 🎨 Design
+Seamless ICS file processing with automatic course code extraction and color coding
+Real-time status detection that intelligently combines schedule and manual input
+Sophisticated recommendation algorithm with explainable, weighted scoring
+Full-stack TypeScript implementation with shared schema validation
+Intuitive friend request system with notifications and real-time messaging
+Production-ready PostgreSQL integration with proper migrations
+📚 What we learned
 
-Mobile-first single page with two list columns (in-class / free-now) and a compact form for schedule input. Recommendation cards show shared classes, score, and a short reason. We prioritized **readability** and **fast scanning** for judges; responsive tweaks are included.
+Context-aware matching (shared campus, courses) dramatically improves recommendation quality
+Real-time features require careful coordination between client and server state
+Type-safe schema sharing between frontend and backend prevents integration bugs
+Component composition with modern UI libraries accelerates development significantly
+Session-based authentication provides better security for campus applications
+🔮 What's next for SlotSync
 
-## 💪 Challenges we ran into
+Enhanced matching: Location-based scoring using campus building data
+Study groups: Multi-user chat rooms and collaborative study sessions
+Calendar integration: Direct scheduling with Google Calendar/Outlook sync
+Smart notifications: Push alerts for friend requests and study opportunities
+Analytics: Study session success tracking and compatibility insights
+University integration: Connect with official course management systems
+🚀 Try it out Live Demo: SlotSync on Replit
 
-* **Time parsing & edge cases** (start==now, end==now, no classes today).
-* **Field naming alignment** between front/back/algorithm to avoid "works on my machine."
-* **Cold-start data** for demos (ensuring at least two users share a class and overlap free time).
-* **Keeping it simple**: resisting feature creep while leaving room for growth.
 
-## 🏆 Accomplishments that we're proud of
-
-* A smooth **live status board** with 30s polling and manual status updates.
-* **Explainable matching** that feels smart without heavy ML.
-* Clear **API contracts** that made 3-person parallelization fast.
-
-## 📚 What we learned
-
-* Focusing on **context** (same campus, same classes) dramatically boosts recommendation quality.
-* "Rules that feel smart" + good UX often beat over-engineering for hackathon demos.
-* Small, well-scoped APIs speed up cross-role collaboration.
-
-## 🔮 What's next for SlotSync
-
-* **JSON persistence** (atomic writes, reload on change) and "time-travel" param `?now=` for demo replays.
-* **Class connections** boosting (currently in same class / next class together).
-* **Location buckets** (UC/Library/Dorm) and proximity scoring.
-* Social discovery and insights (e.g., "You study best with Alice on Tuesdays") as data accumulates.
-
-## 🚀 Try it out
-
-**Live Demo:** (TBD)
-
-**GitHub Repository:** https://github.com/Integral0593/HackCMU
-
-### Running locally
-
-```bash
-# Clone your repo
-git clone https://github.com/Integral0593/HackCMU
-cd HackCMU
-
-# Backend
-pip install flask
-python app.py
-# Open http://127.0.0.1:5000
-
-# (Optional) Frontend is served from /static/index.html by Flask
-```
-
-## 👥 Team
-
-* **Sine** – Frontend – https://github.com/sinewave0201
-* **Psychovia** – Backend – https://github.com/psychovia
-* **InterpreterCE** – Algorithm – https://github.com/Integral0593
-
-## 🙏 Acknowledgments
-
-* Thanks to HackCMU 2025 and ACM@CMU for organizing this event.
-* Shout-out to mentors and peers who gave feedback.
-* Open-source love to Flask and the broader Python/JS ecosystem.
-
----
-
-*Made with ❤️ in 24 hours at Carnegie Mellon University*
+👥 Team Built with ❤️ within 24 hours @HackCMU
