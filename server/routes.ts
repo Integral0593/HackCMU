@@ -188,30 +188,37 @@ function parseICSFile(buffer: Buffer): InsertSchedule[] {
       let courseName = summary;
       
       // Try to extract course code after "::" (e.g., "Course Name::15122")
-      const colonMatch = summary.match(/^(.+?)::(.+)$/);
+      // Normalize colons
+      const normalized = summary.replace(/[：:]{2,}/g, '::');
+      const colonMatch = normalized.match(/^(.+?)\s*::\s*(.+)$/);
       if (colonMatch) {
         const possibleName = colonMatch[1].trim();
         const possibleCode = colonMatch[2].trim();
         
-        // Check if the part after :: looks like a course code
-        // Patterns supported:
-        // - "15122" (numbers only)
-        // - "15122A" (numbers + letter)
-        // - "15122 A" (numbers + space + letter(s))
-        // - "CS 151" (letters + space + numbers)
-        // - "CS 151A" (letters + space + numbers + letter)
-        if (/^\d+[A-Z]?$/.test(possibleCode) || 
-            /^\d+\s+[A-Z]+$/.test(possibleCode) ||
-            /^[A-Z]{2,4}\s*\d{3}[A-Z]?$/.test(possibleCode)) {
-          
-          // Extract just the course number part (remove section letters)
-          const codeMatch = possibleCode.match(/^(\d+)/);
-          if (codeMatch) {
-            courseCode = codeMatch[1]; // Just the numeric part like "10301"
-          } else {
-            courseCode = possibleCode; // Fallback to full code
-          }
+        // Extract 5-digit course code, ignoring any section identifier (letter or number)
+        const codeMatch = possibleCode.match(/\b(\d{5})\b/);
+        if (codeMatch) {
+          courseCode = codeMatch[1]; // 5-digit course code like "15122", "05391"
           courseName = possibleName;
+        } else {
+          // Fallback: check for other course code patterns
+          // - "15122" (numbers only)  
+          // - "15122A" (numbers + letter)
+          // - "15122 A" or "15122 2" (numbers + space + letter/digit)
+          // - "CS 151" (letters + space + numbers)
+          if (/^\d+[A-Z0-9]?$/.test(possibleCode) || 
+              /^\d+\s+[A-Z0-9]+$/.test(possibleCode) ||
+              /^[A-Z]{2,4}\s*\d{3}[A-Z0-9]?$/.test(possibleCode)) {
+            
+            // Extract just the course number part (remove section identifiers)
+            const numMatch = possibleCode.match(/^(\d+)/);
+            if (numMatch) {
+              courseCode = numMatch[1]; // Just the numeric part like "15122"
+            } else {
+              courseCode = possibleCode; // Fallback to full code
+            }
+            courseName = possibleName;
+          }
         }
       } else {
         // Try to extract course code pattern (e.g., "CS 151 - Intro to Programming")
