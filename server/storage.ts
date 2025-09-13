@@ -28,7 +28,7 @@ import {
   userStatus,
   messageNotifications
 } from "@shared/schema";
-import { eq, and, or, desc, asc, isNull, sql } from "drizzle-orm";
+import { eq, and, or, desc, asc, isNull, sql, inArray } from "drizzle-orm";
 import { randomUUID } from "crypto";
 import bcrypt from "bcrypt";
 import { db } from "./db";
@@ -52,6 +52,7 @@ export interface IStorage {
   createSchedule(schedule: InsertSchedule, userId: string): Promise<Schedule>;
   deleteSchedule(scheduleId: string, userId: string): Promise<boolean>;
   createMultipleSchedules(schedules: InsertSchedule[], userId: string): Promise<Schedule[]>;
+  getBulkSchedulesWithUserInfo(userIds: string[]): Promise<UserScheduleWithUser[]>;
   
   // Chat methods
   createChat(chat: InsertChat): Promise<Chat>;
@@ -205,6 +206,29 @@ export class MemStorage implements IStorage {
       schedules.push(schedule);
     }
     return schedules;
+  }
+
+  async getBulkSchedulesWithUserInfo(userIds: string[]): Promise<UserScheduleWithUser[]> {
+    const results: UserScheduleWithUser[] = [];
+    
+    for (const userId of userIds) {
+      const user = this.users.get(userId);
+      if (user) {
+        const userSchedules = Array.from(this.schedules.values()).filter(
+          (schedule) => schedule.userId === userId
+        );
+        
+        results.push({
+          userId: user.id,
+          username: user.username,
+          fullName: user.fullName,
+          avatar: user.avatar,
+          schedules: userSchedules
+        });
+      }
+    }
+    
+    return results;
   }
 
   // Chat methods implementation
@@ -845,6 +869,61 @@ export class PostgreSQLStorage implements IStorage {
     }));
     
     return await db.insert(schedules).values(schedulesToInsert).returning();
+  }
+
+  async getBulkSchedulesWithUserInfo(userIds: string[]): Promise<UserScheduleWithUser[]> {
+    if (userIds.length === 0) {
+      return [];
+    }
+
+    // Use SQL to efficiently get users and their schedules in one query
+    const results = await db.select({
+      userId: users.id,
+      username: users.username,
+      fullName: users.fullName,
+      avatar: users.avatar,
+      scheduleId: schedules.id,
+      courseCode: schedules.courseCode,
+      courseName: schedules.courseName,
+      days: schedules.days,
+      startTime: schedules.startTime,
+      endTime: schedules.endTime,
+      location: schedules.location
+    })
+    .from(users)
+    .leftJoin(schedules, eq(users.id, schedules.userId))
+    .where(inArray(users.id, userIds));
+
+    // Group by user and build the response structure
+    const userMap = new Map<string, UserScheduleWithUser>();
+
+    for (const row of results) {
+      if (!userMap.has(row.userId)) {
+        userMap.set(row.userId, {
+          userId: row.userId,
+          username: row.username,
+          fullName: row.fullName,
+          avatar: row.avatar,
+          schedules: []
+        });
+      }
+
+      // Only add schedule if it exists (not null from left join)
+      if (row.scheduleId) {
+        userMap.get(row.userId)!.schedules.push({
+          id: row.scheduleId,
+          userId: row.userId,
+          courseCode: row.courseCode!,
+          courseName: row.courseName!,
+          days: row.days!,
+          startTime: row.startTime!,
+          endTime: row.endTime!,
+          location: row.location
+        });
+      }
+    }
+
+    return Array.from(userMap.values());
   }
 
   // Chat methods

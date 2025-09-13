@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, jsonb, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, jsonb, timestamp, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -66,6 +66,17 @@ export const friends = pgTable("friends", {
   friendId: varchar("friend_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
   status: text("status").notNull().default("pending"), // confirmed, pending, blocked
+});
+
+// Message notifications table - stores notifications for when users receive messages
+export const messageNotifications = pgTable("message_notifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  recipientId: varchar("recipient_id").notNull().references(() => users.id),
+  senderId: varchar("sender_id").notNull().references(() => users.id),
+  messageId: varchar("message_id").notNull().references(() => messages.id),
+  messagePreview: text("message_preview").notNull(),
+  isRead: boolean("is_read").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
 });
 
 // Status enum for validation
@@ -181,6 +192,15 @@ export const insertFriendSchema = createInsertSchema(friends).pick({
   status: friendStatusEnum.default("pending"),
 });
 
+export const insertMessageNotificationSchema = createInsertSchema(messageNotifications).pick({
+  recipientId: true,
+  senderId: true,
+  messageId: true,
+  messagePreview: true,
+}).extend({
+  messagePreview: z.string().min(1).max(100),
+});
+
 // Friends API validation schemas
 export const addFriendSchema = z.object({
   friendId: z.string().min(1, "Friend ID is required"),
@@ -222,6 +242,9 @@ export type Message = typeof messages.$inferSelect;
 
 export type InsertFriend = z.infer<typeof insertFriendSchema>;
 export type Friend = typeof friends.$inferSelect;
+
+export type InsertMessageNotification = z.infer<typeof insertMessageNotificationSchema>;
+export type MessageNotification = typeof messageNotifications.$inferSelect;
 
 // API response types
 export type StudyPartner = {
@@ -330,3 +353,82 @@ export type PendingFriendRequest = Friend & {
     hobbies?: string | null;
   };
 };
+
+// Type for message notifications with sender info
+export type MessageNotificationWithSender = MessageNotification & {
+  sender: {
+    id: string;
+    username: string;
+    fullName?: string | null;
+    major: string;
+    avatar: string | null;
+  };
+  chat: {
+    id: string;
+    user1Id: string;
+    user2Id: string;
+  };
+};
+
+// Appointment-related types
+export type TimeSlot = {
+  day: string; // monday, tuesday, etc.
+  startTime: string; // HH:MM format
+  endTime: string; // HH:MM format
+};
+
+export type AvailabilitySlot = {
+  day: string;
+  startTime: string;
+  endTime: string;
+  isAvailable: boolean;
+  users: string[]; // User IDs who are available during this slot
+};
+
+export type UserScheduleWithUser = {
+  userId: string;
+  username: string;
+  fullName?: string | null;
+  avatar: string | null;
+  schedules: Schedule[];
+};
+
+export type AppointmentRequest = {
+  friendIds: string[];
+  duration: number; // in minutes
+  timeRange: {
+    startTime: string; // HH:MM
+    endTime: string; // HH:MM
+  };
+  days: string[]; // array of day names
+};
+
+export type AppointmentSlot = {
+  day: string;
+  startTime: string;
+  endTime: string;
+  availableUsers: string[];
+  isFullyAvailable: boolean; // all selected users are available
+};
+
+// Duration options for appointments (in minutes)
+export const appointmentDurations = [15, 30, 45, 60, 90, 120] as const;
+export type AppointmentDuration = typeof appointmentDurations[number];
+
+// Validation schemas for appointment API
+export const bulkScheduleRequestSchema = z.object({
+  userIds: z.array(z.string()).min(1, "At least one user ID is required").max(20, "Too many users requested"),
+});
+
+export const appointmentRequestSchema = z.object({
+  friendIds: z.array(z.string()).min(1, "At least one friend must be selected").max(10, "Too many friends selected"),
+  duration: z.number().min(15).max(480), // 15 minutes to 8 hours
+  timeRange: z.object({
+    startTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
+    endTime: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
+  }),
+  days: z.array(dayEnum).min(1, "At least one day must be selected"),
+});
+
+export type BulkScheduleRequest = z.infer<typeof bulkScheduleRequestSchema>;
+export type InsertAppointmentRequest = z.infer<typeof appointmentRequestSchema>;

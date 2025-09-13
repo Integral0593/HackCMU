@@ -9,6 +9,8 @@ import ScheduleForm from "@/components/ScheduleForm";
 import StudyPartnerRecommendations from "@/components/StudyPartnerRecommendations";
 import UserDetailModal from "@/components/UserDetailModal";
 import ChatInterface from "@/components/ChatInterface";
+import AppointmentDialog from "@/components/AppointmentDialog";
+import TimeGrid from "@/components/TimeGrid";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -25,9 +27,10 @@ import {
   CurrentStatusResponse, 
   StudyPartner,
   SearchUser,
-  FriendWithUser
+  FriendWithUser,
+  UserScheduleWithUser
 } from "@shared/schema";
-import { Search, Users, UserPlus, UserX, BookOpen, Plus, MessageSquare } from "lucide-react";
+import { Search, Users, UserPlus, UserX, BookOpen, Plus, MessageSquare, Calendar } from "lucide-react";
 import logoImage from "@assets/logo_1757730069515.png";
 import dashboardIcon from "@assets/dashboard_icon_1757730011816.png";
 import scheduleIcon from "@assets/schedule_icon_1757730011819.png";
@@ -72,6 +75,16 @@ export default function Home() {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const debouncedPartnerSearch = useDebounce(partnerSearchQuery, 300);
   const debouncedFriendSearch = useDebounce(friendUsernameSearch, 300);
+
+  // Appointment states
+  const [showAppointmentGrid, setShowAppointmentGrid] = useState(false);
+  const [appointmentSettings, setAppointmentSettings] = useState<{
+    selectedFriends: string[];
+    duration: number;
+    timeRange: { startTime: string; endTime: string };
+    days: string[];
+  } | null>(null);
+  const [bulkSchedules, setBulkSchedules] = useState<UserScheduleWithUser[]>([]);
 
   // Real API calls for status and recommendations
   const { data: statusData, isLoading: isStatusLoading, refetch: refetchStatus } = useQuery({
@@ -208,6 +221,45 @@ export default function Home() {
     }
   });
 
+  // Bulk schedules fetch mutation for appointments
+  const bulkSchedulesMutation = useMutation({
+    mutationFn: async (userIds: string[]) => {
+      console.log('🔄 [DEBUG] Bulk schedules API call - userIds:', userIds);
+      console.log('🔄 [DEBUG] Request payload:', { userIds });
+      
+      // Validate userIds are strings before sending
+      const validatedUserIds = userIds.filter(id => typeof id === 'string' && id.length > 0);
+      console.log('🔄 [DEBUG] Validated userIds:', validatedUserIds);
+      
+      if (validatedUserIds.length === 0) {
+        throw new Error('No valid user IDs provided');
+      }
+      
+      try {
+        const response = await apiRequest('POST', '/api/schedules/bulk', { userIds: validatedUserIds });
+        const data = await response.json();
+        console.log('✅ [DEBUG] Bulk schedules API success:', data);
+        return data;
+      } catch (error) {
+        console.error('❌ [DEBUG] Bulk schedules API error:', error);
+        throw error;
+      }
+    },
+    onSuccess: (data: UserScheduleWithUser[]) => {
+      console.log('✅ [DEBUG] Bulk schedules mutation success:', data.length, 'schedules');
+      setBulkSchedules(data);
+      setShowAppointmentGrid(true);
+    },
+    onError: (error: any) => {
+      console.error('❌ [DEBUG] Bulk schedules mutation error:', error);
+      toast({
+        title: "Failed to fetch schedules",
+        description: error?.message || "Unable to load friends' schedules",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleStatusChange = (newStatus: StatusType, customMessage?: string) => {
     setManualStatus(newStatus);
     setManualMessage(customMessage);
@@ -324,6 +376,60 @@ export default function Home() {
     queryClient.invalidateQueries({ queryKey: ['/api/status'] });
     queryClient.invalidateQueries({ queryKey: ['/api/recommendations', user?.id] });
     console.log('ICS uploaded, schedules added:', uploadedSchedules.length);
+  };
+
+  // Appointment handler functions
+  const handleFindCommonTimes = (selectedFriends: string[], duration: number, timeRange: { startTime: string; endTime: string }, days: string[]) => {
+    console.log('🔄 [DEBUG] handleFindCommonTimes called with:', { selectedFriends, duration, timeRange, days });
+    
+    if (!user) {
+      console.error('❌ [DEBUG] No user available for appointment scheduling');
+      return;
+    }
+    
+    console.log('🔄 [DEBUG] Current user:', user.id);
+    
+    setAppointmentSettings({
+      selectedFriends,
+      duration,
+      timeRange,
+      days
+    });
+    
+    // Include the current user's ID along with selected friends
+    const allUserIds = [user.id, ...selectedFriends];
+    console.log('🔄 [DEBUG] All user IDs for bulk schedule fetch:', allUserIds);
+    
+    // Validate all user IDs before making the API call
+    const validUserIds = allUserIds.filter(id => typeof id === 'string' && id.trim().length > 0);
+    console.log('🔄 [DEBUG] Validated user IDs:', validUserIds);
+    
+    if (validUserIds.length === 0) {
+      toast({
+        title: "Invalid user selection",
+        description: "No valid users selected for scheduling.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    bulkSchedulesMutation.mutate(validUserIds);
+    
+    toast({
+      title: "Fetching schedules...",
+      description: "Loading everyone's schedules to find common times."
+    });
+  };
+
+  const handleCreateAppointmentEvent = (event: InsertSchedule) => {
+    if (!user) return;
+    addScheduleMutation.mutate(event);
+  };
+
+  const handleCloseAppointmentGrid = () => {
+    setShowAppointmentGrid(false);
+    setAppointmentSettings(null);
+    setBulkSchedules([]);
   };
 
   const handleUserClick = (userId: string) => {
@@ -515,6 +621,74 @@ export default function Home() {
               onUploadICS={handleUploadICS}
               userId={user?.id}
             />
+            
+            {/* Appointment with Friends Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Make Appointment with Friends
+                  </div>
+                  {showAppointmentGrid && (
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={handleCloseAppointmentGrid}
+                      data-testid="close-appointment-grid"
+                    >
+                      Close Grid
+                    </Button>
+                  )}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Find common meeting times with your friends
+                </p>
+              </CardHeader>
+              <CardContent>
+                {!showAppointmentGrid ? (
+                  <div className="text-center py-6">
+                    <Calendar className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                    <h3 className="text-lg font-medium mb-2">Find Common Times</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Select your friends and preferences to see when everyone is free
+                    </p>
+                    <AppointmentDialog
+                      trigger={
+                        <Button data-testid="appointment-trigger-button" className="w-full sm:w-auto">
+                          <Calendar className="h-4 w-4 mr-2" />
+                          Find Meeting Times
+                        </Button>
+                      }
+                      friends={friends}
+                      onFindTimes={handleFindCommonTimes}
+                      isLoading={bulkSchedulesMutation.isPending}
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {appointmentSettings && (
+                      <div className="p-4 bg-muted/30 rounded-lg">
+                        <div className="flex flex-wrap gap-4 text-sm">
+                          <div><strong>Duration:</strong> {appointmentSettings.duration} minutes</div>
+                          <div><strong>Time Range:</strong> {appointmentSettings.timeRange.startTime} - {appointmentSettings.timeRange.endTime}</div>
+                          <div><strong>Days:</strong> {appointmentSettings.days.join(', ')}</div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    <TimeGrid
+                      userSchedules={bulkSchedules}
+                      selectedFriends={appointmentSettings?.selectedFriends || []}
+                      duration={appointmentSettings?.duration || 60}
+                      timeRange={appointmentSettings?.timeRange || { startTime: "08:00", endTime: "22:00" }}
+                      selectedDays={appointmentSettings?.days || []}
+                      onCreateEvent={handleCreateAppointmentEvent}
+                    />
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
           
           <TabsContent value="partners" className="space-y-4 sm:space-y-6 mt-4 sm:mt-6">

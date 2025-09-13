@@ -16,6 +16,7 @@ import {
   updateUserProfileSchema,
   addFriendSchema,
   searchUsersSchema,
+  bulkScheduleRequestSchema,
   type InsertSchedule,
   type RegisterUser,
   type LoginUser,
@@ -463,6 +464,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get bulk schedules for multiple users (friends only) - MUST come before :userId route
+  app.post('/api/schedules/bulk', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      // Validate request body
+      const validation = bulkScheduleRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          error: 'Invalid request data',
+          details: validation.error.issues
+        });
+      }
+      
+      const { userIds } = validation.data;
+      
+      // Remove the authenticated user from the list if present (they can always access their own)
+      const friendIds = userIds.filter((id: string) => id !== authenticatedUserId);
+      
+      // Verify that all requested users are friends of the authenticated user
+      const friendshipChecks = await Promise.all(
+        friendIds.map((friendId: string) => storage.areFriends(authenticatedUserId, friendId))
+      );
+      
+      const unauthorizedUsers = friendIds.filter((_: string, index: number) => !friendshipChecks[index]);
+      if (unauthorizedUsers.length > 0) {
+        return res.status(403).json({ 
+          error: 'Access denied to some users schedules', 
+          unauthorizedUsers 
+        });
+      }
+      
+      // Get bulk schedules with user info
+      const allUserIds = Array.from(new Set([authenticatedUserId, ...friendIds])); // Include authenticated user and remove duplicates
+      const bulkSchedules = await storage.getBulkSchedulesWithUserInfo(allUserIds);
+      
+      res.json(bulkSchedules);
+    } catch (error: any) {
+      console.error('Bulk schedules error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Create a new schedule
   app.post('/api/schedules/:userId', async (req, res) => {
     try {
@@ -730,11 +774,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messageWithSender = messagesWithSender.find(m => m.id === message.id);
       
       if (messageWithSender) {
-        // Broadcast via WebSocket if users are connected
+        // Get chat info to determine recipient
         const chat = await storage.getChat(chatId);
         if (chat) {
-          const otherUserId = chat.user1Id === authenticatedUserId ? chat.user2Id : chat.user1Id;
-          broadcastToUsers([authenticatedUserId, otherUserId], {
+          const recipientId = chat.user1Id === authenticatedUserId ? chat.user2Id : chat.user1Id;
+          
+          // Create message notification for recipient (only if they're friends)
+          const areFriends = await storage.areFriends(authenticatedUserId, recipientId);
+          if (areFriends) {
+            try {
+              const messagePreview = messageData.content.length > 100 
+                ? messageData.content.substring(0, 97) + '...'
+                : messageData.content;
+                
+              await storage.createMessageNotification({
+                recipientId,
+                senderId: authenticatedUserId,
+                messageId: message.id,
+                messagePreview
+              });
+              
+              logWebSocket('info', 'Message notification created', {
+                recipientId,
+                senderId: authenticatedUserId,
+                messageId: message.id
+              });
+            } catch (notificationError: any) {
+              logWebSocket('error', 'Failed to create message notification', notificationError);
+            }
+          }
+          
+          // Broadcast via WebSocket if users are connected
+          broadcastToUsers([authenticatedUserId, recipientId], {
             type: 'message',
             data: messageWithSender
           });
@@ -805,6 +876,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ count });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Message notification routes
+  
+  // Get message notifications for user - SECURITY FIXED
+  app.get('/api/notifications/messages', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      const { limit = '50' } = req.query;
+      
+      const notifications = await storage.getMessageNotificationsByUserId(
+        authenticatedUserId, 
+        parseInt(limit as string)
+      );
+      res.json(notifications);
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Get unread message notifications count - SECURITY FIXED
+  app.get('/api/notifications/messages/unread-count', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const count = await storage.getUnreadMessageNotificationsCount(authenticatedUserId);
+      res.json({ count });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Mark a specific message notification as read - SECURITY FIXED
+  app.post('/api/notifications/messages/:notificationId/read', requireAuth, async (req, res) => {
+    try {
+      const { notificationId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const success = await storage.markMessageNotificationAsRead(notificationId, authenticatedUserId);
+      
+      if (success) {
+        logWebSocket('info', 'Message notification marked as read', {
+          notificationId,
+          userId: authenticatedUserId
+        });
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'Notification not found or already read' });
+      }
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Mark all message notifications as read - SECURITY FIXED
+  app.post('/api/notifications/messages/read-all', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const count = await storage.markAllMessageNotificationsAsRead(authenticatedUserId);
+      
+      logWebSocket('info', 'All message notifications marked as read', {
+        userId: authenticatedUserId,
+        count
+      });
+      res.json({ success: true, markedCount: count });
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
+    }
+  });
+
+  // Delete a message notification - SECURITY FIXED
+  app.delete('/api/notifications/messages/:notificationId', requireAuth, async (req, res) => {
+    try {
+      const { notificationId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const success = await storage.deleteMessageNotification(notificationId, authenticatedUserId);
+      
+      if (success) {
+        logWebSocket('info', 'Message notification deleted', {
+          notificationId,
+          userId: authenticatedUserId
+        });
+        res.json({ success: true });
+      } else {
+        res.status(404).json({ error: 'Notification not found' });
+      }
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   });
 
@@ -1409,6 +1571,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const chat = await storage.getChat(messageData.chatId);
             if (chat) {
               const otherUserId = chat.user1Id === userId ? chat.user2Id : chat.user1Id;
+              
+              // Create message notification for recipient (only if they're friends)
+              const areFriends = await storage.areFriends(userId, otherUserId);
+              if (areFriends) {
+                try {
+                  const messagePreview = messageData.content.length > 100 
+                    ? messageData.content.substring(0, 97) + '...'
+                    : messageData.content;
+                    
+                  await storage.createMessageNotification({
+                    recipientId: otherUserId,
+                    senderId: userId,
+                    messageId: createdMessage.id,
+                    messagePreview
+                  });
+                  
+                  logWebSocket('info', 'WebSocket message notification created', {
+                    recipientId: otherUserId,
+                    senderId: userId,
+                    messageId: createdMessage.id
+                  });
+                } catch (notificationError: any) {
+                  logWebSocket('error', 'Failed to create WebSocket message notification', notificationError);
+                }
+              }
               
               // Get sender info for the message
               const sender = await storage.getUser(userId);
