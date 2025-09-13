@@ -3,35 +3,13 @@ import StatusBoard from '../StatusBoard'
 import { CurrentStatusResponse } from '@shared/schema'
 
 export default function StatusBoardExample() {
-  // todo: remove mock functionality
+  // Clean state - no mock data
   const [isLoading, setIsLoading] = useState(false);
   
-  const mockStatusData: CurrentStatusResponse = {
+  const emptyStatusData: CurrentStatusResponse = {
     now: new Date().toISOString(),
-    in_class: [
-      {
-        id: "1",
-        username: "Alice Chen",
-        major: "Computer Science",
-        current_class: "CS 151",
-        manual_status: "studying"
-      }
-    ],
-    free: [
-      {
-        id: "2", 
-        username: "Bob Johnson",
-        major: "Mathematics",
-        next_class: "Math 201 @ 2:00 PM",
-        manual_status: "free"
-      },
-      {
-        id: "3",
-        username: "Carol Smith", 
-        major: "Business",
-        manual_status: "help"
-      }
-    ]
+    in_class: [],
+    free: []
   };
 
   const handleRefresh = () => {
@@ -47,7 +25,7 @@ export default function StatusBoardExample() {
   return (
     <div className="p-4">
       <StatusBoard 
-        statusData={mockStatusData}
+        statusData={emptyStatusData}
         isLoading={isLoading}
         onRefresh={handleRefresh}
         onUserClick={handleUserClick}

@@ -1,8 +1,8 @@
-Fix app crashing issue by handling missing avatar data
+Add two-way friend requests and a notifications page
 
-Handle undefined avatar values in createUser by converting them to null to prevent runtime errors.
+Implement mutual confirmation for friend requests and add a notification system to display pending invitations.
 
 Replit-Commit-Author: Agent
 Replit-Commit-Session-Id: a01c814c-1746-404e-a473-fbe4d7501018
-Replit-Commit-Checkpoint-Type: full_checkpoint
-Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/a9dfb115-e642-4401-8be3-a80648ab78a2/a01c814c-1746-404e-a473-fbe4d7501018/ZvHkItY
+Replit-Commit-Checkpoint-Type: intermediate_checkpoint
+Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/a9dfb115-e642-4401-8be3-a80648ab78a2/a01c814c-1746-404e-a473-fbe4d7501018/KfJn5Pf

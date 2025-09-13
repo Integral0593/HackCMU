@@ -1,39 +1,21 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Link, useLocation } from "wouter";
 import StatusIndicator from "./StatusIndicator";
-import { User } from "@shared/schema";
-import { GraduationCap, Sun, Moon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { PublicUser } from "@shared/schema";
+import logoImage from "@assets/logo_1757730069515.png";
 
-type StatusType = "studying" | "free" | "help" | "busy" | "tired" | "social";
+type StatusType = "studying" | "free" | "in_class" | "busy" | "tired" | "social";
 
 interface HeaderProps {
-  user: User | null;
   userStatus?: StatusType;
-  onLogin?: () => void;
-  onLogout?: () => void;
 }
 
-export default function Header({ user, userStatus = "free", onLogin, onLogout }: HeaderProps) {
-  const [isDark, setIsDark] = useState(false);
-
-  // Initialize theme on mount
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    const shouldBeDark = savedTheme === 'dark' || (!savedTheme && prefersDark);
-    
-    setIsDark(shouldBeDark);
-    document.documentElement.classList.toggle('dark', shouldBeDark);
-  }, []);
-
-  const toggleTheme = () => {
-    const newIsDark = !isDark;
-    setIsDark(newIsDark);
-    document.documentElement.classList.toggle('dark', newIsDark);
-    localStorage.setItem('theme', newIsDark ? 'dark' : 'light');
-  };
+export default function Header({ userStatus = "free" }: HeaderProps) {
+  const { user, isAuthenticated, logout } = useAuth();
+  const [, setLocation] = useLocation();
 
   const userInitials = user?.username
     .split(" ")
@@ -42,62 +24,57 @@ export default function Header({ user, userStatus = "free", onLogin, onLogout }:
     .toUpperCase();
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex h-16 items-center justify-between">
+    <header className="sticky top-0 z-50 w-full border-b bg-red-600/95 backdrop-blur supports-[backdrop-filter]:bg-red-600/60 text-white border-red-700/50">
+      <div className="container mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex h-14 sm:h-16 items-center justify-between">
           {/* Logo */}
           <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-primary" />
-            <h1 className="text-lg font-semibold">Campus Connect</h1>
+            <img src={logoImage} alt="SlotSync Logo" className="h-7 w-7 sm:h-8 sm:w-8" />
+            <h1 className="text-base sm:text-lg font-semibold text-white">SlotSync</h1>
           </div>
 
           {/* User section */}
-          <div className="flex items-center gap-4">
-            {/* Theme toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              data-testid="theme-toggle"
-            >
-              {isDark ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-            </Button>
-
-            {user ? (
-              <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-2 sm:gap-3">
                 {/* User status */}
                 <StatusIndicator status={userStatus} size="sm" />
                 
                 {/* User info */}
-                <div className="flex items-center gap-2">
-                  <Avatar className="h-8 w-8">
-                    {user.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
-                    <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
-                  </Avatar>
-                  
-                  <div className="hidden sm:block">
-                    <p className="text-sm font-medium">{user.username}</p>
-                    <p className="text-xs text-muted-foreground">{user.major}</p>
+                <Link href="/profile" data-testid="link-profile">
+                  <div className="flex items-center gap-2 hover-elevate rounded-lg p-1 -m-1 cursor-pointer">
+                    <Avatar className="h-7 w-7 sm:h-8 sm:w-8">
+                      {user.avatar && <AvatarImage src={user.avatar} alt={user.username} />}
+                      <AvatarFallback className="text-xs">{userInitials}</AvatarFallback>
+                    </Avatar>
+                    
+                    <div className="hidden sm:block">
+                      <p className="text-sm font-medium text-white">{user.username}</p>
+                      <p className="text-xs text-red-100">{user.major}</p>
+                    </div>
                   </div>
-                </div>
-
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  onClick={onLogout}
-                  data-testid="logout-button"
-                >
-                  Logout
-                </Button>
+                </Link>
               </div>
             ) : (
-              <Button onClick={onLogin} data-testid="login-button">
-                Login
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button 
+                  onClick={() => setLocation('/login')} 
+                  data-testid="button-login"
+                  size="sm"
+                  variant="outline"
+                  className="text-xs sm:text-sm px-2 sm:px-3 min-h-[36px] sm:min-h-[32px] border-red-300 text-white hover:bg-red-700 hover:border-red-400"
+                >
+                  Login
+                </Button>
+                <Button 
+                  onClick={() => setLocation('/register')} 
+                  data-testid="button-register"
+                  size="sm"
+                  className="text-xs sm:text-sm px-2 sm:px-3 min-h-[36px] sm:min-h-[32px] bg-red-700 hover:bg-red-800 text-white border-red-600"
+                >
+                  Sign Up
+                </Button>
+              </div>
             )}
           </div>
         </div>

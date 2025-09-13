@@ -4,7 +4,7 @@ import StatusIndicator from "./StatusIndicator";
 import { User } from "@shared/schema";
 import { cn } from "@/lib/utils";
 
-type StatusType = "studying" | "free" | "help" | "busy" | "tired" | "social";
+type StatusType = "studying" | "free" | "in_class" | "busy" | "tired" | "social";
 
 interface UserCardProps {
   user: Pick<User, "id" | "username" | "major" | "avatar">;
@@ -45,7 +45,7 @@ export default function UserCard({
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <h3 className="font-medium text-sm truncate">{user.username}</h3>
-            <StatusIndicator status={status} size="sm" />
+            <StatusIndicator status={status} size="default" showIcon={true} showLabel={false} />
           </div>
           
           <p className="text-xs text-muted-foreground truncate">{user.major}</p>

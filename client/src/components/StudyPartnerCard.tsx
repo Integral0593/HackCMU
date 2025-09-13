@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StudyPartner } from "@shared/schema";
-import { MessageCircle, Users } from "lucide-react";
+import { MessageCircle, Users, GraduationCap, Heart, BookOpen } from "lucide-react";
 
 interface StudyPartnerCardProps {
   partner: StudyPartner;
@@ -17,6 +17,25 @@ export default function StudyPartnerCard({ partner, onConnect }: StudyPartnerCar
     .join("")
     .toUpperCase();
 
+  // Extract hobbies from bio (same logic as backend)
+  const extractHobbies = (bio: string | null | undefined): string[] => {
+    if (!bio) return [];
+    
+    const hobbyKeywords = [
+      'reading', 'gaming', 'music', 'sports', 'basketball', 'football', 'soccer', 
+      'tennis', 'swimming', 'running', 'hiking', 'cooking', 'photography', 'art',
+      'coding', 'programming', 'chess', 'guitar', 'piano', 'movies', 'travel',
+      'dancing', 'singing', 'writing', 'drawing', 'cycling', 'yoga', 'gym',
+      'anime', 'manga', 'books', 'science', 'research', 'technology', 'AI',
+      'machine learning', 'data science'
+    ];
+    
+    const bioLower = bio.toLowerCase();
+    return hobbyKeywords.filter(hobby => bioLower.includes(hobby));
+  };
+
+  const userHobbies = extractHobbies(partner.bio);
+
   return (
     <Card className="hover-elevate" data-testid={`study-partner-${partner.id}`}>
       <CardContent className="p-4">
@@ -29,12 +48,39 @@ export default function StudyPartnerCard({ partner, onConnect }: StudyPartnerCar
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <h3 className="font-semibold text-sm truncate">{partner.username}</h3>
-              <Badge variant="outline" className="text-xs">
-                {Math.round(partner.score)}
-              </Badge>
             </div>
             
-            <p className="text-xs text-muted-foreground mb-2">{partner.major}</p>
+            {/* User Info Tags */}
+            <div className="flex flex-wrap gap-1 mb-2">
+              {/* Major Tag */}
+              <Badge variant="outline" className="text-xs">
+                <BookOpen className="h-3 w-3 mr-1" />
+                {partner.major}
+              </Badge>
+              
+              {/* Grade Tag */}
+              {partner.grade && (
+                <Badge variant="outline" className="text-xs">
+                  <GraduationCap className="h-3 w-3 mr-1" />
+                  {partner.grade}
+                </Badge>
+              )}
+              
+              {/* Hobby Tags - show up to 3 */}
+              {userHobbies.slice(0, 3).map((hobby, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  <Heart className="h-3 w-3 mr-1" />
+                  {hobby}
+                </Badge>
+              ))}
+              
+              {/* Show +X more if there are more hobbies */}
+              {userHobbies.length > 3 && (
+                <Badge variant="secondary" className="text-xs">
+                  +{userHobbies.length - 3} more
+                </Badge>
+              )}
+            </div>
             
             {partner.shared_classes.length > 0 && (
               <div className="flex items-center gap-1 mb-2">
