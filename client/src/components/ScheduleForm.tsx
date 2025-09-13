@@ -7,10 +7,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
-import { insertScheduleSchema, InsertSchedule, Schedule } from "@shared/schema";
+import { insertScheduleSchema, InsertSchedule, Schedule, dayEnum } from "@shared/schema";
 import { Plus, X, Clock, Upload, Calendar } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { extractCourseCode, getCourseColor, formatCourseName } from "@/utils/courseUtils";
 
 interface ScheduleFormProps {
   schedules: Schedule[];
@@ -21,13 +22,13 @@ interface ScheduleFormProps {
 }
 
 const days = [
-  { value: "monday", label: "Monday" },
-  { value: "tuesday", label: "Tuesday" },
-  { value: "wednesday", label: "Wednesday" },
-  { value: "thursday", label: "Thursday" },
-  { value: "friday", label: "Friday" },
-  { value: "saturday", label: "Saturday" },
-  { value: "sunday", label: "Sunday" },
+  { value: "monday" as const, label: "Monday" },
+  { value: "tuesday" as const, label: "Tuesday" },
+  { value: "wednesday" as const, label: "Wednesday" },
+  { value: "thursday" as const, label: "Thursday" },
+  { value: "friday" as const, label: "Friday" },
+  { value: "saturday" as const, label: "Saturday" },
+  { value: "sunday" as const, label: "Sunday" },
 ];
 
 export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedule, onUploadICS, userId }: ScheduleFormProps) {
@@ -212,8 +213,20 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
               >
                 <div className="flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <Badge variant="outline" className="text-xs">{schedule.courseCode}</Badge>
-                    <span className="font-medium text-sm">{schedule.courseName}</span>
+                    {(() => {
+                      // 优先使用已解析的courseCode，然后尝试从courseName提取，最后使用备用值
+                      const courseCode = schedule.courseCode || extractCourseCode(schedule.courseName) || "N/A";
+                      const colorClass = getCourseColor(courseCode);
+                      return (
+                        <Badge 
+                          variant="outline" 
+                          className={`text-xs font-semibold ${colorClass}`}
+                        >
+                          {courseCode}
+                        </Badge>
+                      );
+                    })()}
+                    <span className="font-medium text-sm">{formatCourseName(schedule.courseName)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground mt-1">
                     {schedule.days.map(day => day.charAt(0).toUpperCase() + day.slice(1)).join(", ")} • {formatTime(schedule.startTime)} - {formatTime(schedule.endTime)}
@@ -298,7 +311,7 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                                 onCheckedChange={(checked) => {
                                   const currentValue = field.value || [];
                                   if (checked) {
-                                    field.onChange([...currentValue, day.value as any]);
+                                    field.onChange([...currentValue, day.value]);
                                   } else {
                                     field.onChange(currentValue.filter((v) => v !== day.value));
                                   }
@@ -447,7 +460,7 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                                 onCheckedChange={(checked) => {
                                   const currentValue = field.value || [];
                                   if (checked) {
-                                    field.onChange([...currentValue, day.value as any]);
+                                    field.onChange([...currentValue, day.value]);
                                   } else {
                                     field.onChange(currentValue.filter((v) => v !== day.value));
                                   }

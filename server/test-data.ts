@@ -9,30 +9,40 @@ interface TestUserData {
   hobbies: string[];
 }
 
-// Strategic course overlaps - these courses will be shared across multiple users
+// Strategic course overlaps using real CMU course codes - these courses will be shared across multiple users
 const SHARED_COURSES = {
   // STEM Core (shared by CS, Math, Engineering, Physics)
-  CALC_I: { code: "MATH101", name: "Calculus I" },
-  LINEAR_ALG: { code: "MATH201", name: "Linear Algebra" },
-  STATISTICS: { code: "MATH301", name: "Statistics" },
+  CALC_I: { code: "21120", name: "Differential and Integral Calculus" },
+  LINEAR_ALG: { code: "21241", name: "Matrices and Linear Transformations" },
+  STATISTICS: { code: "36225", name: "Introduction to Probability Theory" },
   
   // CS Core (shared by CS students and some Engineering)
-  DATA_STRUCT: { code: "CS201", name: "Data Structures" },
-  ALGORITHMS: { code: "CS301", name: "Algorithms" },
-  MACHINE_LEARN: { code: "CS401", name: "Machine Learning" },
+  DATA_STRUCT: { code: "15122", name: "Principles of Imperative Computation" },
+  ALGORITHMS: { code: "15451", name: "Algorithm Design and Analysis" },
+  MACHINE_LEARN: { code: "10301", name: "Introduction to Machine Learning" },
+  PROG_FUNDAMENTALS: { code: "15112", name: "Fundamentals of Programming" },
+  COMPUTER_SYSTEMS: { code: "15213", name: "Introduction to Computer Systems" },
   
   // General Education (shared across all majors)
-  ENG_WRITING: { code: "ENG101", name: "English Writing" },
-  PSYCH_INTRO: { code: "PSYCH101", name: "Introduction to Psychology" },
-  HIST_MODERN: { code: "HIST201", name: "Modern History" },
+  ENG_WRITING: { code: "76101", name: "Interpretation and Argument" },
+  PSYCH_INTRO: { code: "85102", name: "Introduction to Psychology" },
+  MODERN_REGRESSION: { code: "36401", name: "Modern Regression" },
+  HIST_MODERN: { code: "79262", name: "Modern World History" },
   
   // Business/Economics (shared by Economics, some CS)
-  MICROECON: { code: "ECON101", name: "Microeconomics" },
-  FINANCE: { code: "BUS201", name: "Business Finance" },
+  MICROECON: { code: "73100", name: "Principles of Economics" },
+  STATISTICS_DATA: { code: "36202", name: "Methods for Statistics & Data Science" },
+  FINANCE: { code: "73230", name: "Corporate Finance" },
   
   // Art/Creative (shared by Art, some Psychology)
-  ART_HISTORY: { code: "ART101", name: "Art History" },
-  DESIGN: { code: "ART201", name: "Digital Design" }
+  ART_HISTORY: { code: "60101", name: "Introduction to Art History" },
+  DESIGN: { code: "51261", name: "Interaction Design Fundamentals" },
+  
+  // Additional realistic CMU courses for variety
+  STATISTICAL_COMPUTING: { code: "36350", name: "Statistical Computing" },
+  PSYCH_GAMES: { code: "85107", name: "The Psychology of Video Games" },
+  SOCIAL_PSYCH: { code: "85150", name: "Social Psychology" },
+  THEORETICAL_CS: { code: "15251", name: "Great Ideas in Theoretical Computer Science" }
 };
 
 // Test users with strategic overlaps
@@ -47,10 +57,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Programming", "Gaming", "Music Production"],
     schedules: [
-      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, day: "monday", startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
-      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, day: "wednesday", startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
-      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, day: "tuesday", startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
-      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, day: "friday", startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" }
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "Gates 4401" },
+      { courseCode: SHARED_COURSES.STATISTICAL_COMPUTING.code, courseName: SHARED_COURSES.STATISTICAL_COMPUTING.name, days: ["wednesday"], startTime: "14:00", endTime: "15:30", location: "Baker Hall 150" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "GHC 4307" },
+      { courseCode: SHARED_COURSES.PSYCH_GAMES.code, courseName: SHARED_COURSES.PSYCH_GAMES.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Porter Hall 226B" }
     ]
   },
   {
@@ -63,10 +73,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Reading", "Chess", "Photography"],
     schedules: [
-      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, day: "monday", startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
-      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, day: "tuesday", startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
-      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, day: "thursday", startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
-      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, day: "friday", startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" }
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Gates 4401" },
+      { courseCode: SHARED_COURSES.STATISTICAL_COMPUTING.code, courseName: SHARED_COURSES.STATISTICAL_COMPUTING.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Baker Hall 150" },
+      { courseCode: SHARED_COURSES.MODERN_REGRESSION.code, courseName: SHARED_COURSES.MODERN_REGRESSION.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Baker Hall 232" },
+      { courseCode: SHARED_COURSES.SOCIAL_PSYCH.code, courseName: SHARED_COURSES.SOCIAL_PSYCH.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Porter Hall 125" }
     ]
   },
   {
@@ -79,10 +89,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["3D Printing", "Robotics", "Gaming"],
     schedules: [
-      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, day: "monday", startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
-      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, day: "monday", startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
-      { courseCode: "ENG201", courseName: "Engineering Mechanics", day: "wednesday", startTime: "10:00", endTime: "11:30", location: "Engineering 101" },
-      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, day: "thursday", startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" }
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
+      { courseCode: "ENG201", courseName: "Engineering Mechanics", days: ["wednesday"], startTime: "10:00", endTime: "11:30", location: "Engineering 101" },
+      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, days: ["thursday"], startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" }
     ]
   },
   {
@@ -95,10 +105,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Finance", "Travel", "Cooking"],
     schedules: [
-      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, day: "tuesday", startTime: "11:00", endTime: "12:30", location: "Economics Building 101" },
-      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, day: "thursday", startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
-      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, day: "friday", startTime: "09:00", endTime: "10:30", location: "Business Building 205" },
-      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, day: "friday", startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" }
+      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, days: ["tuesday"], startTime: "11:00", endTime: "12:30", location: "Economics Building 101" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
+      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, days: ["friday"], startTime: "09:00", endTime: "10:30", location: "Business Building 205" },
+      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" }
     ]
   },
   {
@@ -111,10 +121,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Reading", "Music", "Fitness"],
     schedules: [
-      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, day: "thursday", startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" },
-      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, day: "thursday", startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
-      { courseCode: "PSYCH201", courseName: "Cognitive Psychology", day: "monday", startTime: "14:00", endTime: "15:30", location: "Psychology Building 301" },
-      { courseCode: SHARED_COURSES.ART_HISTORY.code, courseName: SHARED_COURSES.ART_HISTORY.name, day: "wednesday", startTime: "16:00", endTime: "17:30", location: "Art Building 101" }
+      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, days: ["thursday"], startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
+      { courseCode: "PSYCH201", courseName: "Cognitive Psychology", days: ["monday"], startTime: "14:00", endTime: "15:30", location: "Psychology Building 301" },
+      { courseCode: SHARED_COURSES.ART_HISTORY.code, courseName: SHARED_COURSES.ART_HISTORY.name, days: ["wednesday"], startTime: "16:00", endTime: "17:30", location: "Art Building 101" }
     ]
   },
   {
@@ -127,10 +137,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Photography", "Digital Art", "Music"],
     schedules: [
-      { courseCode: SHARED_COURSES.ART_HISTORY.code, courseName: SHARED_COURSES.ART_HISTORY.name, day: "wednesday", startTime: "16:00", endTime: "17:30", location: "Art Building 101" },
-      { courseCode: SHARED_COURSES.DESIGN.code, courseName: SHARED_COURSES.DESIGN.name, day: "tuesday", startTime: "14:00", endTime: "15:30", location: "Art Building 205" },
-      { courseCode: "ART301", courseName: "Advanced Photography", day: "friday", startTime: "10:00", endTime: "11:30", location: "Art Building 301" },
-      { courseCode: SHARED_COURSES.HIST_MODERN.code, courseName: SHARED_COURSES.HIST_MODERN.name, day: "monday", startTime: "16:00", endTime: "17:30", location: "History Building 201" }
+      { courseCode: SHARED_COURSES.ART_HISTORY.code, courseName: SHARED_COURSES.ART_HISTORY.name, days: ["wednesday"], startTime: "16:00", endTime: "17:30", location: "Art Building 101" },
+      { courseCode: SHARED_COURSES.DESIGN.code, courseName: SHARED_COURSES.DESIGN.name, days: ["tuesday"], startTime: "14:00", endTime: "15:30", location: "Art Building 205" },
+      { courseCode: "ART301", courseName: "Advanced Photography", days: ["friday"], startTime: "10:00", endTime: "11:30", location: "Art Building 301" },
+      { courseCode: SHARED_COURSES.HIST_MODERN.code, courseName: SHARED_COURSES.HIST_MODERN.name, days: ["monday"], startTime: "16:00", endTime: "17:30", location: "History Building 201" }
     ]
   },
   {
@@ -143,10 +153,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Programming", "Astronomy", "Chess"],
     schedules: [
-      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, day: "monday", startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
-      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, day: "tuesday", startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
-      { courseCode: "PHYS201", courseName: "Classical Mechanics", day: "wednesday", startTime: "08:00", endTime: "09:30", location: "Physics Building 101" },
-      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, day: "monday", startTime: "10:00", endTime: "11:30", location: "CS Building 201" }
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: "PHYS201", courseName: "Classical Mechanics", days: ["wednesday"], startTime: "08:00", endTime: "09:30", location: "Physics Building 101" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" }
     ]
   },
   {
@@ -159,10 +169,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Gaming", "AI Research", "Fitness"],
     schedules: [
-      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, day: "wednesday", startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
-      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, day: "tuesday", startTime: "16:00", endTime: "17:30", location: "CS Building 401" },
-      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, day: "thursday", startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
-      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, day: "tuesday", startTime: "11:00", endTime: "12:30", location: "Economics Building 101" }
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "Gates 4401" },
+      { courseCode: SHARED_COURSES.MODERN_REGRESSION.code, courseName: SHARED_COURSES.MODERN_REGRESSION.name, days: ["tuesday"], startTime: "16:00", endTime: "17:30", location: "Baker Hall 150" },
+      { courseCode: SHARED_COURSES.SOCIAL_PSYCH.code, courseName: SHARED_COURSES.SOCIAL_PSYCH.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Porter Hall 125" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["friday"], startTime: "14:00", endTime: "15:30", location: "GHC 4307" }
     ]
   },
   {
@@ -175,10 +185,10 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Chess", "Programming", "Finance"],
     schedules: [
-      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, day: "tuesday", startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
-      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, day: "wednesday", startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
-      { courseCode: "MATH401", courseName: "Abstract Algebra", day: "thursday", startTime: "09:00", endTime: "10:30", location: "Math Building 401" },
-      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, day: "friday", startTime: "09:00", endTime: "10:30", location: "Business Building 205" }
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, days: ["wednesday"], startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
+      { courseCode: "MATH401", courseName: "Abstract Algebra", days: ["thursday"], startTime: "09:00", endTime: "10:30", location: "Math Building 401" },
+      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, days: ["friday"], startTime: "09:00", endTime: "10:30", location: "Business Building 205" }
     ]
   },
   {
@@ -191,10 +201,257 @@ const TEST_USERS: TestUserData[] = [
     },
     hobbies: ["Travel", "Digital Art", "Finance"],
     schedules: [
-      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, day: "tuesday", startTime: "16:00", endTime: "17:30", location: "CS Building 401" },
-      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, day: "tuesday", startTime: "11:00", endTime: "12:30", location: "Economics Building 101" },
-      { courseCode: SHARED_COURSES.DESIGN.code, courseName: SHARED_COURSES.DESIGN.name, day: "tuesday", startTime: "14:00", endTime: "15:30", location: "Art Building 205" },
-      { courseCode: SHARED_COURSES.HIST_MODERN.code, courseName: SHARED_COURSES.HIST_MODERN.name, day: "monday", startTime: "16:00", endTime: "17:30", location: "History Building 201" }
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["tuesday"], startTime: "16:00", endTime: "17:30", location: "CS Building 401" },
+      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, days: ["tuesday"], startTime: "11:00", endTime: "12:30", location: "Economics Building 101" },
+      { courseCode: SHARED_COURSES.DESIGN.code, courseName: SHARED_COURSES.DESIGN.name, days: ["tuesday"], startTime: "14:00", endTime: "15:30", location: "Art Building 205" },
+      { courseCode: SHARED_COURSES.HIST_MODERN.code, courseName: SHARED_COURSES.HIST_MODERN.name, days: ["monday"], startTime: "16:00", endTime: "17:30", location: "History Building 201" }
+    ]
+  },
+  // Additional CS students (forming a 5-person CS group)
+  {
+    user: {
+      username: "kevin_cs3",
+      password: "TestPass123",
+      fullName: "Kevin Liu",
+      major: "Computer Science",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Machine Learning", "Basketball", "Coding"],
+    schedules: [
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["tuesday"], startTime: "16:00", endTime: "17:30", location: "CS Building 401" },
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: "CS501", courseName: "Advanced Algorithms", days: ["thursday"], startTime: "14:00", endTime: "15:30", location: "CS Building 501" }
+    ]
+  },
+  {
+    user: {
+      username: "maria_cs4",
+      password: "TestPass123",
+      fullName: "Maria Rodriguez",
+      major: "Computer Science",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Web Development", "Music", "Gaming"],
+    schedules: [
+      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, days: ["wednesday"], startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
+      { courseCode: "CS202", courseName: "Database Systems", days: ["tuesday"], startTime: "11:00", endTime: "12:30", location: "CS Building 202" },
+      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" }
+    ]
+  },
+  {
+    user: {
+      username: "tom_cs5",
+      password: "TestPass123",
+      fullName: "Thomas Wilson",
+      major: "Computer Science",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["AI Research", "Chess", "Programming"],
+    schedules: [
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["tuesday"], startTime: "16:00", endTime: "17:30", location: "CS Building 401" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
+      { courseCode: "CS601", courseName: "Artificial Intelligence", days: ["wednesday"], startTime: "16:00", endTime: "17:30", location: "CS Building 601" },
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" }
+    ]
+  },
+  // Additional Math students (forming a 5-person Math group)
+  {
+    user: {
+      username: "anna_math3",
+      password: "TestPass123",
+      fullName: "Anna Thompson",
+      major: "Mathematics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Statistics", "Reading", "Tennis"],
+    schedules: [
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
+      { courseCode: "MATH501", courseName: "Real Analysis", days: ["friday"], startTime: "10:00", endTime: "11:30", location: "Math Building 501" }
+    ]
+  },
+  {
+    user: {
+      username: "ben_math4",
+      password: "TestPass123",
+      fullName: "Benjamin Davis",
+      major: "Mathematics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Programming", "Finance", "Soccer"],
+    schedules: [
+      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, days: ["wednesday"], startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, days: ["friday"], startTime: "09:00", endTime: "10:30", location: "Business Building 205" },
+      { courseCode: "MATH301", courseName: "Differential Equations", days: ["wednesday"], startTime: "10:00", endTime: "11:30", location: "Math Building 301" }
+    ]
+  },
+  {
+    user: {
+      username: "lisa_math5",
+      password: "TestPass123",
+      fullName: "Lisa Park",
+      major: "Mathematics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Teaching", "Photography", "Hiking"],
+    schedules: [
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
+      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" },
+      { courseCode: "MATH201", courseName: "Discrete Mathematics", days: ["tuesday"], startTime: "14:00", endTime: "15:30", location: "Math Building 201" }
+    ]
+  },
+  // Additional Economics students (forming a 5-person Economics group)
+  {
+    user: {
+      username: "carlos_econ3",
+      password: "TestPass123",
+      fullName: "Carlos Mendez",
+      major: "Economics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Finance", "Basketball", "Trading"],
+    schedules: [
+      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, days: ["tuesday"], startTime: "11:00", endTime: "12:30", location: "Economics Building 101" },
+      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, days: ["friday"], startTime: "09:00", endTime: "10:30", location: "Business Building 205" },
+      { courseCode: "ECON201", courseName: "Macroeconomics", days: ["thursday"], startTime: "09:00", endTime: "10:30", location: "Economics Building 201" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" }
+    ]
+  },
+  {
+    user: {
+      username: "sophie_econ4",
+      password: "TestPass123",
+      fullName: "Sophie Chen",
+      major: "Economics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Policy Research", "Travel", "Cooking"],
+    schedules: [
+      { courseCode: SHARED_COURSES.MICROECON.code, courseName: SHARED_COURSES.MICROECON.name, days: ["tuesday"], startTime: "11:00", endTime: "12:30", location: "Economics Building 101" },
+      { courseCode: SHARED_COURSES.MACHINE_LEARN.code, courseName: SHARED_COURSES.MACHINE_LEARN.name, days: ["tuesday"], startTime: "16:00", endTime: "17:30", location: "CS Building 401" },
+      { courseCode: "ECON301", courseName: "Econometrics", days: ["monday"], startTime: "14:00", endTime: "15:30", location: "Economics Building 301" },
+      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" }
+    ]
+  },
+  {
+    user: {
+      username: "james_econ5",
+      password: "TestPass123",
+      fullName: "James Taylor",
+      major: "Economics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Data Analysis", "Gaming", "Finance"],
+    schedules: [
+      { courseCode: SHARED_COURSES.FINANCE.code, courseName: SHARED_COURSES.FINANCE.name, days: ["friday"], startTime: "09:00", endTime: "10:30", location: "Business Building 205" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
+      { courseCode: "ECON401", courseName: "International Economics", days: ["wednesday"], startTime: "11:00", endTime: "12:30", location: "Economics Building 401" }
+    ]
+  },
+  // Additional Psychology students
+  {
+    user: {
+      username: "rachel_psych2",
+      password: "TestPass123",
+      fullName: "Rachel Johnson",
+      major: "Psychology",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Research", "Yoga", "Reading"],
+    schedules: [
+      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, days: ["thursday"], startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" },
+      { courseCode: SHARED_COURSES.STATISTICS.code, courseName: SHARED_COURSES.STATISTICS.name, days: ["thursday"], startTime: "11:00", endTime: "12:30", location: "Math Building 301" },
+      { courseCode: "PSYCH301", courseName: "Research Methods", days: ["tuesday"], startTime: "13:00", endTime: "14:30", location: "Psychology Building 301" },
+      { courseCode: SHARED_COURSES.ART_HISTORY.code, courseName: SHARED_COURSES.ART_HISTORY.name, days: ["wednesday"], startTime: "16:00", endTime: "17:30", location: "Art Building 101" }
+    ]
+  },
+  {
+    user: {
+      username: "peter_psych3",
+      password: "TestPass123",
+      fullName: "Peter Wang",
+      major: "Psychology",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Music Therapy", "Guitar", "Fitness"],
+    schedules: [
+      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, days: ["thursday"], startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" },
+      { courseCode: "PSYCH401", courseName: "Abnormal Psychology", days: ["monday"], startTime: "11:00", endTime: "12:30", location: "Psychology Building 401" },
+      { courseCode: SHARED_COURSES.ENG_WRITING.code, courseName: SHARED_COURSES.ENG_WRITING.name, days: ["friday"], startTime: "13:00", endTime: "14:30", location: "Liberal Arts 202" },
+      { courseCode: SHARED_COURSES.DESIGN.code, courseName: SHARED_COURSES.DESIGN.name, days: ["tuesday"], startTime: "14:00", endTime: "15:30", location: "Art Building 205" }
+    ]
+  },
+  // Additional Physics students  
+  {
+    user: {
+      username: "elena_physics2",
+      password: "TestPass123",
+      fullName: "Elena Volkov",
+      major: "Physics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Research", "Programming", "Rock Climbing"],
+    schedules: [
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: "PHYS301", courseName: "Quantum Mechanics", days: ["thursday"], startTime: "10:00", endTime: "11:30", location: "Physics Building 301" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" }
+    ]
+  },
+  {
+    user: {
+      username: "mark_physics3",
+      password: "TestPass123",
+      fullName: "Mark Stevens",
+      major: "Physics",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Astronomy", "Photography", "Chess"],
+    schedules: [
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" },
+      { courseCode: "PHYS201", courseName: "Classical Mechanics", days: ["wednesday"], startTime: "08:00", endTime: "09:30", location: "Physics Building 101" },
+      { courseCode: SHARED_COURSES.ALGORITHMS.code, courseName: SHARED_COURSES.ALGORITHMS.name, days: ["wednesday"], startTime: "14:00", endTime: "15:30", location: "CS Building 301" },
+      { courseCode: "PHYS401", courseName: "Electromagnetism", days: ["friday"], startTime: "11:00", endTime: "12:30", location: "Physics Building 401" }
+    ]
+  },
+  // Additional Engineering student
+  {
+    user: {
+      username: "diana_eng2",
+      password: "TestPass123",
+      fullName: "Diana Foster",
+      major: "Engineering",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Robotics", "3D Printing", "Design"],
+    schedules: [
+      { courseCode: SHARED_COURSES.CALC_I.code, courseName: SHARED_COURSES.CALC_I.name, days: ["monday"], startTime: "08:00", endTime: "09:30", location: "Math Building 201" },
+      { courseCode: SHARED_COURSES.DATA_STRUCT.code, courseName: SHARED_COURSES.DATA_STRUCT.name, days: ["monday"], startTime: "10:00", endTime: "11:30", location: "CS Building 201" },
+      { courseCode: "ENG301", courseName: "Thermodynamics", days: ["tuesday"], startTime: "13:00", endTime: "14:30", location: "Engineering 301" },
+      { courseCode: SHARED_COURSES.LINEAR_ALG.code, courseName: SHARED_COURSES.LINEAR_ALG.name, days: ["tuesday"], startTime: "09:00", endTime: "10:30", location: "Math Building 105" }
+    ]
+  },
+  // Additional Art student
+  {
+    user: {
+      username: "max_art2",
+      password: "TestPass123",
+      fullName: "Max Rivera",
+      major: "Art",
+      confirmPassword: "TestPass123"
+    },
+    hobbies: ["Digital Art", "Video Games", "Music"],
+    schedules: [
+      { courseCode: SHARED_COURSES.ART_HISTORY.code, courseName: SHARED_COURSES.ART_HISTORY.name, days: ["wednesday"], startTime: "16:00", endTime: "17:30", location: "Art Building 101" },
+      { courseCode: SHARED_COURSES.DESIGN.code, courseName: SHARED_COURSES.DESIGN.name, days: ["tuesday"], startTime: "14:00", endTime: "15:30", location: "Art Building 205" },
+      { courseCode: "ART401", courseName: "3D Animation", days: ["thursday"], startTime: "13:00", endTime: "14:30", location: "Art Building 401" },
+      { courseCode: SHARED_COURSES.PSYCH_INTRO.code, courseName: SHARED_COURSES.PSYCH_INTRO.name, days: ["thursday"], startTime: "15:00", endTime: "16:30", location: "Psychology Building 201" }
     ]
   }
 ];

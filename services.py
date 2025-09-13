@@ -325,8 +325,18 @@ class ICSParser:
         if not summary:
             return "UNKNOWN", "Unknown Course"
         
+        # Normalize full-width colons to ASCII colons
+        normalized_summary = summary.replace('：：', '::').replace('：', ':')
+        
+        # Try to match patterns with double colons and 5-digit codes: "Course Name :: 12345 1"
+        match = re.search(r'^(.+?)\s*::\s*(\d{5})', normalized_summary.strip())
+        if match:
+            name = match.group(1).strip()
+            code = match.group(2).strip()
+            return code, name
+        
         # Try to match patterns like "Course Name :: CODE123 D" (:: separator format)
-        match = re.match(r'^(.+?)\s*::\s*(.+)$', summary.strip())
+        match = re.match(r'^(.+?)\s*::\s*(.+)$', normalized_summary.strip())
         if match:
             name = match.group(1).strip()
             code = match.group(2).strip()

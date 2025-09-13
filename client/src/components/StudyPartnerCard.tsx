@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { StudyPartner } from "@shared/schema";
 import { MessageCircle, Users, GraduationCap, Heart, BookOpen } from "lucide-react";
+import { extractCourseCode, getCourseColor } from "@/utils/courseUtils";
 
 interface StudyPartnerCardProps {
   partner: StudyPartner;
@@ -86,11 +87,20 @@ export default function StudyPartnerCard({ partner, onConnect }: StudyPartnerCar
               <div className="flex items-center gap-1 mb-2">
                 <Users className="h-3 w-3 text-primary" />
                 <div className="flex flex-wrap gap-1">
-                  {partner.shared_classes.map((course, index) => (
-                    <Badge key={index} variant="secondary" className="text-xs">
-                      {course}
-                    </Badge>
-                  ))}
+                  {partner.shared_classes.map((course, index) => {
+                    // 尝试提取5位数字课程代号，如果失败则使用前10个字符作为备用
+                    const courseCode = extractCourseCode(course) || course.substring(0, 10);
+                    const colorClass = getCourseColor(courseCode);
+                    return (
+                      <Badge 
+                        key={index} 
+                        variant="outline" 
+                        className={`text-xs font-semibold ${colorClass}`}
+                      >
+                        {courseCode}
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
             )}

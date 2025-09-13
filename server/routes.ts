@@ -786,8 +786,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         friendship.userId1 === authenticatedUserId ? friendship.userId2 : friendship.userId1
       );
       
-      // Include the authenticated user and their friends
-      const userIds = [authenticatedUserId, ...friendIds];
+      // Include only friends, not the authenticated user themselves
+      const userIds = friendIds;
       
       // Get current time info
       const now = new Date();
@@ -841,8 +841,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             custom_message: userStatus?.message || null
           };
           
-          // Categorize user based on current class status
-          if (currentClass) {
+          // Categorize based on manual status: "in_class" status -> in_class, all others -> free/available
+          const userManualStatus = userStatus?.status || 'free';
+          if (userManualStatus === 'in_class') {
             in_class.push(statusUser);
           } else {
             free.push(statusUser);
@@ -975,6 +976,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get pending friend requests
+  app.get('/api/friends/requests', requireAuth, async (req, res) => {
+    try {
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      const pendingRequests = await storage.getPendingFriendRequests(authenticatedUserId);
+      
+      res.json(pendingRequests);
+    } catch (error: any) {
+      console.error('Get pending friend requests error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Accept friend request
+  app.put('/api/friends/requests/:requestId/accept', requireAuth, async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      if (!requestId) {
+        return res.status(400).json({ error: 'Request ID is required' });
+      }
+      
+      const success = await storage.acceptFriendRequest(requestId, authenticatedUserId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Friend request not found or already processed' });
+      }
+      
+      res.json({
+        message: 'Friend request accepted successfully'
+      });
+    } catch (error: any) {
+      console.error('Accept friend request error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Reject friend request
+  app.put('/api/friends/requests/:requestId/reject', requireAuth, async (req, res) => {
+    try {
+      const { requestId } = req.params;
+      const authenticatedUserId = (req as any).authenticatedUserId;
+      
+      if (!requestId) {
+        return res.status(400).json({ error: 'Request ID is required' });
+      }
+      
+      const success = await storage.rejectFriendRequest(requestId, authenticatedUserId);
+      
+      if (!success) {
+        return res.status(404).json({ error: 'Friend request not found' });
+      }
+      
+      res.json({
+        message: 'Friend request rejected successfully'
+      });
+    } catch (error: any) {
+      console.error('Reject friend request error:', error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Update user manual status
   app.put('/api/status/:userId', requireAuth, async (req, res) => {
     try {
@@ -988,8 +1053,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const { status, message } = req.body;
       
-      // TODO: Validate status against allowed values
-      // TODO: Store status update in database
+      // Validate status against allowed values
+      const validStatuses = ["studying", "free", "in_class", "busy", "tired", "social"];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: 'Invalid status value' });
+      }
+      
+      // Store status update in database
+      await storage.updateUserStatus(userId, status, message);
       
       console.log('Status updated for user', userId, ':', status, message ? `with message: "${message}"` : '');
       

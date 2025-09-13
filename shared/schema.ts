@@ -35,6 +35,7 @@ export const userStatus = pgTable("user_status", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id),
   manualStatus: text("manual_status").notNull(), // studying, free, in_class, busy, tired, social
+  message: text("message"), // optional custom status message
   lastUpdated: timestamp("last_updated").defaultNow(),
 });
 
@@ -64,7 +65,7 @@ export const friends = pgTable("friends", {
   userId: varchar("user_id").notNull().references(() => users.id),
   friendId: varchar("friend_id").notNull().references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
-  status: text("status").notNull().default("confirmed"), // confirmed, pending, blocked
+  status: text("status").notNull().default("pending"), // confirmed, pending, blocked
 });
 
 // Status enum for validation
@@ -177,7 +178,7 @@ export const insertFriendSchema = createInsertSchema(friends).pick({
   friendId: true,
   status: true,
 }).extend({
-  status: friendStatusEnum.default("confirmed"),
+  status: friendStatusEnum.default("pending"),
 });
 
 // Friends API validation schemas
@@ -311,5 +312,21 @@ export type FriendWithUser = Friend & {
     dorm: string | null;
     college: string | null;
     bio: string | null;
+  };
+};
+
+// Type for pending friend requests with requester info
+export type PendingFriendRequest = Friend & {
+  requester: {
+    id: string;
+    username: string;
+    fullName?: string | null;
+    major: string;
+    avatar: string | null;
+    dorm: string | null;
+    college: string | null;
+    bio: string | null;
+    grade?: string | null;
+    hobbies?: string | null;
   };
 };

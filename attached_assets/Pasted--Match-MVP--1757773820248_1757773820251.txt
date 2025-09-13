@@ -1,0 +1,165 @@
+棒！把“Match（配对/推荐）”这块拆成**必须**与**可选增强**两层，给你一份可直接落地的实现清单（含接口、数据、打分、测试与兜底）。照这个做，一晚能跑出稳定的 MVP，且留好加分位。
+
+---
+
+# 一、功能定义（一句话）
+
+给定 `user_id`（可选 `now`），返回**Top-N 学习伙伴候选**：与我**同课**、当前**都空闲**、并按规则**打分排序**，附**可解释理由**。
+
+**输入**：`snapshot={users,schedules,statuses}`, `user_id`, `now?`
+**输出**：`[{id, username, major, shared_classes, score, reason, current_class?, next_class?}]`
+
+---
+
+# 二、必须实现（MVP）
+
+## 1) 数据契约（后端 ⇄ 算法）
+
+* **用户**：`{id -> {username, major}}`
+* **课表项**：`{course, day(monday..), start(HH:MM), end(HH:MM), location?}`
+* **状态**：`manual in {free,studying,help,busy,tired,social}`（缺省为 `unknown`）
+
+## 2) 可用性判定（纯函数）
+
+* `time_to_minutes(hhmm)`、`is_between(now,start,end)`（\[start,end)）
+* `current_class_for(user_id, now)`：命中返回课表项，否则 `None`
+* `next_class_for(user_id, now)`：今天离现在最近的下一节
+
+> 规则：若手动状态强表达“忙/累”，仅在打分阶段惩罚；是否“在上课”以课表为准。
+
+## 3) 候选集生成（过滤器）
+
+* 非本人；与我**至少 1 门同课**；**双方当前都 free**（`current_class_for==None`）
+* （可选）剔除黑名单/最近已配对的同学（如设 30 分钟冷却）
+
+## 4) 打分器（权重可配置）
+
+建议先用**简单线性加权**，保证可解释：
+
+* `+10 × 共同课程数`
+* `+6  如果对方 manual == "help"`
+* `-4  如果对方 manual ∈ {"busy","tired"}`
+* `+3  同专业`
+* `+2  位置相近（UC/Library 等枚举匹配）`（没有位置时跳过）
+
+> 仅当 `score > 0` 入候选，支持 `MAX_N=5`
+
+## 5) 理由生成（可读性强）
+
+* 取前 1–2 条命中规则拼为一句话：
+  `Shares {n} class(es); both free now`
+  `Willing to help; same major`
+* 若命中“当前/下一节同课”增强（见可选项），追加：
+  `Currently in the same class` / `Next class together: {course}`
+
+## 6) 排序与返回
+
+* 排序键：`(-score, username)`；截断 `Top-N`
+* 保证字段齐全、无 `null` 文本（缺字段不返回/给默认）
+
+## 7) 接口（后端）
+
+* `GET /api/recommendations?user_id=...&now=YYYY-MM-DDTHH:MM?`
+  后端拉取 `snapshot` → 调算法 → 返回 `{candidates:[...]}`
+
+---
+
+# 三、可选增强（按优先级，从上往下做）
+
+1. **同课连接/下一节同课加权**
+
+   * 当前就同课：`+15` 并返回 `current_class`
+   * 下一节同课：`+10` 并返回 `next_class`
+2. **互补意图**
+
+   * 我 `need_help`（若有该枚举）对接对方 `help`：额外 `+4`
+3. **时间窗重叠（≥30 分钟）**
+
+   * 若引入“空档窗口”，计算接下来 60 分钟内双方空档重叠长度作为加权
+4. **地点近邻（校园枚举）**
+
+   * UC/Library/Dorm 等轻枚举，完全相同 `+2`，相邻 `+1`
+5. **多样性/冷却**
+
+   * 避免连续推荐同一人：同一用户 30 分钟内分数 `×0.8`
+6. **冷启动兜底**
+
+   * 同课不足时，返回“同专业且空闲”的 1–2 人，标注为 `fallback: true`
+
+---
+
+# 四、模块结构（建议）
+
+```
+alg/
+  availability.py   # 时间/状态判定
+  candidates.py     # 候选集生成
+  scoring.py        # 打分与理由
+  match.py          # 入口：get_study_partners(snapshot, user_id, now=None)
+  config.py         # 权重/阈值（dict）
+```
+
+**关键签名**
+
+```python
+def get_study_partners(snapshot, user_id, now=None, topn=5) -> list[dict]:
+    # 1) 解析 now；2) 取我与他人的课程集合
+    # 3) 过滤候选；4) 逐个算分；5) 生成 reason；6) 排序截断
+```
+
+---
+
+# 五、测试清单（最少这些）
+
+* **时间边界**：`now==start` / `now==end` / 无课日
+* **过滤**：无同课 / 仅一方空闲 / 自己被排除
+* **打分**：`help` 加分、`busy/tired` 减分、同专业加分
+* **排序稳定**：同分按 `username` 升序
+* **空态**：无候选 → `[]`（不抛错）；兜底返回标注 `fallback`
+* **理由**：每个候选至少 1 条、与命中规则一致
+
+---
+
+# 六、前后端对齐点（只列 Match 相关）
+
+* **请求**：`user_id`（必填）、`now`（可选）
+* **返回字段**：`id, username, major, shared_classes, score, reason`（可选：`current_class, next_class`）
+* **轮询策略**：推荐**按需点击**触发（不要 30s 轮询），状态面板 30s 轮询即可
+* **空态文案**：前端显示“暂无合适的学习伙伴（尝试更新状态/补充课表）”
+
+---
+
+# 七、兜底策略（Demo 友好）
+
+* **没人匹配** → 返回 `[]` + 提示；同时提供备用接口参数 `?fallback=1` 允许后端触发“同专业空闲”兜底
+* **时间不理想** → 支持 `?now=` 注入到“公共空档”时段
+* **数据稀疏** → 用种子数据保证至少两人同课、至少一人 `help`
+
+---
+
+# 八、权重默认（可直接用）
+
+```python
+WEIGHTS = {
+  "shared_course": 10,
+  "help": 6,
+  "busy_tired": -4,
+  "same_major": 3,
+  "same_location": 2,
+  "same_current_class": 15,   # 可选增强
+  "same_next_class": 10       # 可选增强
+}
+```
+
+**理由模板（优先级）**
+
+1. `Shares {n} class(es)`
+2. `Both free now`
+3. `Willing to help`
+4. `Same major`
+5. `Same location: {loc}`
+6. `Currently in the same class` / `Next class together: {course}`
+
+---
+
+需要的话，我可以把上面的模块骨架（`alg/*.py` + 一个 `__main__` 小脚本）直接生成给你们，从现有 h5-min 项目里 import 即可调用。

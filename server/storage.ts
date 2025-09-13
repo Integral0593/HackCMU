@@ -70,7 +70,11 @@ export interface IStorage {
   getFriends(userId: string): Promise<FriendWithUser[]>;
   getFriendsByUserId(userId: string): Promise<Friend[]>;
   areFriends(userId: string, friendId: string): Promise<boolean>;
+  acceptFriendRequest(requestId: string, authenticatedUserId: string): Promise<boolean>;
+  rejectFriendRequest(requestId: string, authenticatedUserId: string): Promise<boolean>;
+  getPendingFriendRequests(userId: string): Promise<PendingFriendRequest[]>;
   getUserStatus(userId: string): Promise<{ status: string; message?: string | null } | null>;
+  updateUserStatus(userId: string, status: string, message?: string): Promise<void>;
   
   // Recommendation methods
   getStudyPartnerRecommendations(userId: string, limit?: number): Promise<StudyPartner[]>;
@@ -493,6 +497,83 @@ export class MemStorage implements IStorage {
     return null;
   }
 
+  // Accept a friend request
+  async acceptFriendRequest(requestId: string, authenticatedUserId: string): Promise<boolean> {
+    const request = this.friends.get(requestId);
+    if (!request || request.status !== 'pending') {
+      return false;
+    }
+
+    // Only the friend (recipient) can accept the request
+    if (request.friendId !== authenticatedUserId) {
+      return false;
+    }
+
+    // Update the request to confirmed
+    request.status = 'confirmed';
+    this.friends.set(requestId, request);
+
+    // Create the reciprocal friendship
+    const reciprocalId = randomUUID();
+    const reciprocalFriendship: Friend = {
+      id: reciprocalId,
+      userId: request.friendId,
+      friendId: request.userId,
+      createdAt: new Date(),
+      status: 'confirmed'
+    };
+    
+    this.friends.set(reciprocalId, reciprocalFriendship);
+    return true;
+  }
+
+  // Reject a friend request
+  async rejectFriendRequest(requestId: string, authenticatedUserId: string): Promise<boolean> {
+    const request = this.friends.get(requestId);
+    if (!request || request.status !== 'pending') {
+      return false;
+    }
+
+    // Only the friend (recipient) can reject the request
+    if (request.friendId !== authenticatedUserId) {
+      return false;
+    }
+
+    // Remove the pending request
+    this.friends.delete(requestId);
+    return true;
+  }
+
+  // Get all pending friend requests for a user
+  async getPendingFriendRequests(userId: string): Promise<PendingFriendRequest[]> {
+    const pendingRequests: PendingFriendRequest[] = [];
+    
+    for (const friend of Array.from(this.friends.values())) {
+      if (friend.friendId === userId && friend.status === 'pending') {
+        const requester = await this.getUser(friend.userId);
+        if (requester) {
+          pendingRequests.push({
+            ...friend,
+            requester: {
+              id: requester.id,
+              username: requester.username,
+              fullName: requester.fullName,
+              major: requester.major,
+              avatar: requester.avatar,
+              dorm: requester.dorm,
+              college: requester.college,
+              bio: requester.bio,
+              grade: requester.grade,
+              hobbies: requester.hobbies
+            }
+          });
+        }
+      }
+    }
+    
+    return pendingRequests;
+  }
+
   async getFriendsByUserId(userId: string): Promise<Friend[]> {
     return Array.from(this.friends.values()).filter(friend => 
       friend.userId === userId || friend.friendId === userId
@@ -506,6 +587,18 @@ export class MemStorage implements IStorage {
       status: status.manualStatus,
       message: status.message || null
     };
+  }
+
+  async updateUserStatus(userId: string, status: string, message?: string): Promise<void> {
+    const statusId = randomUUID();
+    const statusData = {
+      id: statusId,
+      userId,
+      manualStatus: status,
+      message: message || null,
+      lastUpdated: new Date()
+    };
+    this.userStatuses.set(userId, statusData);
   }
 
   // Helper function to extract hobbies from bio text
@@ -558,110 +651,64 @@ export class MemStorage implements IStorage {
 
   // Smart recommendation algorithm implementation
   async getStudyPartnerRecommendations(userId: string, limit = 10): Promise<StudyPartner[]> {
-    const currentUser = this.users.get(userId);
-    if (!currentUser) return [];
-    
-    const currentUserSchedules = Array.from(this.schedules.values()).filter(
-      schedule => schedule.userId === userId
-    );
-    const currentUserCourses = currentUserSchedules.map(s => s.courseCode);
-    const currentUserHobbies = this.extractHobbies(currentUser.bio);
-    
-    const recommendations: StudyPartner[] = [];
-    
-    for (const [otherUserId, otherUser] of Array.from(this.users.entries())) {
-      if (otherUserId === userId) continue;
+    try {
+      // Import the new match algorithm
+      const { getStudyPartners } = await import('./matchAlgorithm');
       
-      // Check if already friends (exclude from recommendations)
-      const areFriends = await this.areFriends(userId, otherUserId);
-      if (areFriends) continue;
+      console.log(`[MemStorage] Using new match algorithm for user ${userId}`);
       
-      const otherUserSchedules = Array.from(this.schedules.values()).filter(
-        schedule => schedule.userId === otherUserId
-      );
-      const otherUserCourses = otherUserSchedules.map(s => s.courseCode);
-      const otherUserHobbies = this.extractHobbies(otherUser.bio);
-      
-      // Calculate weighted scores
-      let totalScore = 0;
-      
-      // 1. Course overlap score (weight: 0.4) - slightly reduced for diversity
-      const sharedCourses = currentUserCourses.filter(course => 
-        otherUserCourses.includes(course)
-      );
-      const maxCourses = Math.max(currentUserCourses.length, otherUserCourses.length, 1);
-      const courseScore = sharedCourses.length / maxCourses;
-      totalScore += courseScore * 0.4;
-      
-      // 2. Major similarity score (weight: 0.2) - reduced to increase diversity
-      const majorScore = this.calculateMajorSimilarity(currentUser.major, otherUser.major);
-      totalScore += majorScore * 0.2;
-      
-      // 3. Hobby overlap score (weight: 0.35) - increased for better interest matching
-      const sharedHobbies = currentUserHobbies.filter(hobby => 
-        otherUserHobbies.includes(hobby)
-      );
-      const maxHobbies = Math.max(currentUserHobbies.length, otherUserHobbies.length, 1);
-      const hobbyScore = sharedHobbies.length / maxHobbies;
-      totalScore += hobbyScore * 0.35;
-      
-      // 4. Grade diversity bonus (weight: 0.05) - small bonus for cross-grade connections
-      const gradeBonus = (currentUser.grade !== otherUser.grade && currentUser.grade && otherUser.grade) ? 0.1 : 0;
-      totalScore += gradeBonus * 0.05;
-      
-      // Only include if there's some meaningful connection (score > 0.1)
-      if (totalScore > 0.1) {
-        // Generate recommendation reason
-        let reason = '';
-        if (sharedCourses.length > 0) {
-          reason += `Shares ${sharedCourses.length} course${sharedCourses.length > 1 ? 's' : ''} (${sharedCourses.slice(0, 2).join(', ')})`;
-        }
-        if (majorScore > 0.7) {
-          reason += reason ? '; ' : '';
-          reason += currentUser.major === otherUser.major ? 'Same major' : 'Similar major';
-        }
-        if (sharedHobbies.length > 0) {
-          reason += reason ? '; ' : '';
-          reason += `Shared interests: ${sharedHobbies.slice(0, 2).join(', ')}`;
-        }
-        if (!reason) {
-          reason = 'Potential study partner based on profile';
-        }
-        
-        // Find current class for other user (simplified - could be enhanced)
-        const now = new Date();
-        const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const currentTime = now.toTimeString().slice(0, 5);
-        
-        let currentClass = '';
-        for (const schedule of otherUserSchedules) {
-          if (schedule.days.includes(currentDay) && 
-              schedule.startTime <= currentTime && 
-              schedule.endTime >= currentTime) {
-            currentClass = `${schedule.courseCode}: ${schedule.courseName}`;
-            break;
-          }
-        }
-        
-        recommendations.push({
-          id: otherUser.id,
-          username: otherUser.username,
-          fullName: otherUser.fullName,
-          major: otherUser.major,
-          grade: otherUser.grade,
-          bio: otherUser.bio,
-          avatar: otherUser.avatar,
-          score: Math.round(totalScore * 100), // Convert to percentage
-          shared_classes: sharedCourses,
-          current_class: currentClass || undefined,
-          reason: reason
-        });
+      // Prepare snapshot data structure for MemStorage
+      const currentUser = this.users.get(userId);
+      if (!currentUser) return [];
+
+      // Build users map
+      const usersMap = new Map();
+      for (const [id, user] of this.users.entries()) {
+        usersMap.set(id, user);
       }
+
+      // Build schedules map
+      const schedulesMap = new Map();
+      for (const [id] of this.users.entries()) {
+        const userSchedules = Array.from(this.schedules.values()).filter(
+          schedule => schedule.userId === id
+        );
+        schedulesMap.set(id, userSchedules);
+      }
+
+      // Build statuses map  
+      const statusesMap = new Map();
+      for (const [id] of this.users.entries()) {
+        const userStatus = this.userStatuses.get(id);
+        statusesMap.set(id, userStatus || { status: 'free', message: null });
+      }
+
+      // Prepare snapshot
+      const snapshot = {
+        users: usersMap,
+        schedules: schedulesMap,
+        statuses: statusesMap
+      };
+
+      // Call the new algorithm
+      const recommendations = await getStudyPartners(snapshot, userId, new Date(), limit);
+      
+      // Filter out friends from recommendations
+      const filteredRecommendations = [];
+      for (const rec of recommendations) {
+        const areFriends = await this.areFriends(userId, rec.id);
+        if (!areFriends) {
+          filteredRecommendations.push(rec);
+        }
+      }
+
+      console.log(`[MemStorage] Generated ${filteredRecommendations.length} recommendations using new algorithm for user ${userId}`);
+      return filteredRecommendations;
+
+    } catch (error) {
+      console.error('[MemStorage] Error in getStudyPartnerRecommendations:', error);
+      return [];
     }
-    
-    // Sort by score (highest first) and return limited results
-    recommendations.sort((a, b) => b.score - a.score);
-    return recommendations.slice(0, limit);
   }
 }
 
@@ -1076,9 +1123,33 @@ export class PostgreSQLStorage implements IStorage {
       return null;
     }
     return {
-      status: result[0].status,
+      status: result[0].manualStatus,
       message: result[0].message
     };
+  }
+
+  async updateUserStatus(userId: string, status: string, message?: string): Promise<void> {
+    // Check if user status record exists
+    const existing = await db.select().from(userStatus).where(eq(userStatus.userId, userId)).limit(1);
+    
+    if (existing.length > 0) {
+      // Update existing record
+      await db.update(userStatus)
+        .set({ 
+          manualStatus: status, 
+          message: message || null, 
+          lastUpdated: sql`now()` 
+        })
+        .where(eq(userStatus.userId, userId));
+    } else {
+      // Create new record
+      await db.insert(userStatus)
+        .values({
+          userId,
+          manualStatus: status,
+          message: message || null
+        });
+    }
   }
 
   async areFriends(userId: string, friendId: string): Promise<boolean> {
@@ -1090,6 +1161,114 @@ export class PostgreSQLStorage implements IStorage {
     );
 
     return result.length > 0;
+  }
+
+  // Accept a friend request (PostgreSQL implementation)
+  async acceptFriendRequest(requestId: string, authenticatedUserId: string): Promise<boolean> {
+    try {
+      // Get the friend request
+      const result = await db.select().from(friends).where(eq(friends.id, requestId)).limit(1);
+      const request = result[0];
+      
+      if (!request || request.status !== 'pending') {
+        return false;
+      }
+
+      // Only the friend (recipient) can accept the request
+      if (request.friendId !== authenticatedUserId) {
+        return false;
+      }
+
+      // Update the request to confirmed
+      await db.update(friends)
+        .set({ status: 'confirmed' })
+        .where(eq(friends.id, requestId));
+
+      // Create the reciprocal friendship
+      await db.insert(friends).values({
+        userId: request.friendId,
+        friendId: request.userId,
+        status: 'confirmed'
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('Error accepting friend request:', error);
+      return false;
+    }
+  }
+
+  // Reject a friend request (PostgreSQL implementation)
+  async rejectFriendRequest(requestId: string, authenticatedUserId: string): Promise<boolean> {
+    try {
+      // Get the friend request
+      const result = await db.select().from(friends).where(eq(friends.id, requestId)).limit(1);
+      const request = result[0];
+      
+      if (!request || request.status !== 'pending') {
+        return false;
+      }
+
+      // Only the friend (recipient) can reject the request
+      if (request.friendId !== authenticatedUserId) {
+        return false;
+      }
+
+      // Remove the pending request
+      await db.delete(friends).where(eq(friends.id, requestId));
+      
+      return true;
+    } catch (error) {
+      console.error('Error rejecting friend request:', error);
+      return false;
+    }
+  }
+
+  // Get all pending friend requests for a user (PostgreSQL implementation)
+  async getPendingFriendRequests(userId: string): Promise<PendingFriendRequest[]> {
+    try {
+      const result = await db.select({
+        id: friends.id,
+        userId: friends.userId,
+        friendId: friends.friendId,
+        createdAt: friends.createdAt,
+        status: friends.status,
+        requester: {
+          id: users.id,
+          username: users.username,
+          fullName: users.fullName,
+          major: users.major,
+          avatar: users.avatar,
+          dorm: users.dorm,
+          college: users.college,
+          bio: users.bio,
+          grade: users.grade
+        }
+      })
+      .from(friends)
+      .innerJoin(users, eq(friends.userId, users.id))
+      .where(
+        and(
+          eq(friends.friendId, userId),
+          eq(friends.status, 'pending')
+        )
+      );
+      
+      return result.map(row => ({
+        id: row.id,
+        userId: row.userId,
+        friendId: row.friendId,
+        createdAt: row.createdAt,
+        status: row.status,
+        requester: {
+          ...row.requester,
+          hobbies: null // Add hobbies field
+        }
+      }));
+    } catch (error) {
+      console.error('Error getting pending friend requests:', error);
+      return [];
+    }
   }
 
   // Helper function to extract hobbies from bio text
@@ -1142,110 +1321,66 @@ export class PostgreSQLStorage implements IStorage {
 
   // Smart recommendation algorithm implementation for PostgreSQL
   async getStudyPartnerRecommendations(userId: string, limit = 10): Promise<StudyPartner[]> {
-    // Get current user
-    const currentUser = await this.getUser(userId);
-    if (!currentUser) return [];
-    
-    // Get current user's schedules and courses
-    const currentUserSchedules = await this.getSchedulesByUserId(userId);
-    const currentUserCourses = currentUserSchedules.map(s => s.courseCode);
-    const currentUserHobbies = this.extractHobbies(currentUser.bio);
-    
-    // Get all other users (excluding friends and current user)
-    const allUsers = await db.select().from(users).where(sql`${users.id} != ${userId}`);
-    
-    const recommendations: StudyPartner[] = [];
-    
-    for (const otherUser of allUsers) {
-      // Check if already friends (exclude from recommendations)
-      const areFriends = await this.areFriends(userId, otherUser.id);
-      if (areFriends) continue;
+    try {
+      // Import the new match algorithm
+      const { getStudyPartners } = await import('./matchAlgorithm');
       
-      // Get other user's schedules and courses
-      const otherUserSchedules = await this.getSchedulesByUserId(otherUser.id);
-      const otherUserCourses = otherUserSchedules.map(s => s.courseCode);
-      const otherUserHobbies = this.extractHobbies(otherUser.bio);
-      
-      // Calculate weighted scores
-      let totalScore = 0;
-      
-      // 1. Course overlap score (weight: 0.4) - slightly reduced for diversity
-      const sharedCourses = currentUserCourses.filter(course => 
-        otherUserCourses.includes(course)
-      );
-      const maxCourses = Math.max(currentUserCourses.length, otherUserCourses.length, 1);
-      const courseScore = sharedCourses.length / maxCourses;
-      totalScore += courseScore * 0.4;
-      
-      // 2. Major similarity score (weight: 0.2) - reduced to increase diversity
-      const majorScore = this.calculateMajorSimilarity(currentUser.major, otherUser.major);
-      totalScore += majorScore * 0.2;
-      
-      // 3. Hobby overlap score (weight: 0.35) - increased for better interest matching
-      const sharedHobbies = currentUserHobbies.filter(hobby => 
-        otherUserHobbies.includes(hobby)
-      );
-      const maxHobbies = Math.max(currentUserHobbies.length, otherUserHobbies.length, 1);
-      const hobbyScore = sharedHobbies.length / maxHobbies;
-      totalScore += hobbyScore * 0.35;
-      
-      // 4. Grade diversity bonus (weight: 0.05) - small bonus for cross-grade connections
-      const gradeBonus = (currentUser.grade !== otherUser.grade && currentUser.grade && otherUser.grade) ? 0.1 : 0;
-      totalScore += gradeBonus * 0.05;
-      
-      // Only include if there's some meaningful connection (score > 0.1)
-      if (totalScore > 0.1) {
-        // Generate recommendation reason
-        let reason = '';
-        if (sharedCourses.length > 0) {
-          reason += `Shares ${sharedCourses.length} course${sharedCourses.length > 1 ? 's' : ''} (${sharedCourses.slice(0, 2).join(', ')})`;
-        }
-        if (majorScore > 0.7) {
-          reason += reason ? '; ' : '';
-          reason += currentUser.major === otherUser.major ? 'Same major' : 'Similar major';
-        }
-        if (sharedHobbies.length > 0) {
-          reason += reason ? '; ' : '';
-          reason += `Shared interests: ${sharedHobbies.slice(0, 2).join(', ')}`;
-        }
-        if (!reason) {
-          reason = 'Potential study partner based on profile';
-        }
-        
-        // Find current class for other user (simplified - could be enhanced)
-        const now = new Date();
-        const currentDay = now.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase();
-        const currentTime = now.toTimeString().slice(0, 5);
-        
-        let currentClass = '';
-        for (const schedule of otherUserSchedules) {
-          if (schedule.days.includes(currentDay) && 
-              schedule.startTime <= currentTime && 
-              schedule.endTime >= currentTime) {
-            currentClass = `${schedule.courseCode}: ${schedule.courseName}`;
-            break;
-          }
-        }
-        
-        recommendations.push({
-          id: otherUser.id,
-          username: otherUser.username,
-          fullName: otherUser.fullName,
-          major: otherUser.major,
-          grade: otherUser.grade,
-          bio: otherUser.bio,
-          avatar: otherUser.avatar,
-          score: Math.round(totalScore * 100), // Convert to percentage
-          shared_classes: sharedCourses,
-          current_class: currentClass || undefined,
-          reason: reason
-        });
+      // Prepare snapshot data structure
+      const currentUser = await this.getUser(userId);
+      if (!currentUser) return [];
+
+      // Get all users
+      const allUsers = await db.select().from(users);
+      const usersMap = new Map();
+      for (const user of allUsers) {
+        usersMap.set(user.id, user);
       }
+
+      // Get all schedules
+      const schedulesMap = new Map();
+      for (const user of allUsers) {
+        const userSchedules = await this.getSchedulesByUserId(user.id);
+        schedulesMap.set(user.id, userSchedules);
+      }
+
+      // Get all statuses  
+      const statusesMap = new Map();
+      for (const user of allUsers) {
+        try {
+          const userStatus = await this.getUserStatus(user.id);
+          statusesMap.set(user.id, userStatus);
+        } catch (error) {
+          // Default status if not found
+          statusesMap.set(user.id, { status: 'free', message: null });
+        }
+      }
+
+      // Prepare snapshot
+      const snapshot = {
+        users: usersMap,
+        schedules: schedulesMap,
+        statuses: statusesMap
+      };
+
+      // Call the new algorithm
+      const recommendations = await getStudyPartners(snapshot, userId, new Date(), limit);
+      
+      // Filter out friends from recommendations
+      const filteredRecommendations = [];
+      for (const rec of recommendations) {
+        const areFriends = await this.areFriends(userId, rec.id);
+        if (!areFriends) {
+          filteredRecommendations.push(rec);
+        }
+      }
+
+      console.log(`Generated ${filteredRecommendations.length} recommendations using new algorithm for user ${userId}`);
+      return filteredRecommendations;
+
+    } catch (error) {
+      console.error('Error in getStudyPartnerRecommendations:', error);
+      return [];
     }
-    
-    // Sort by score (highest first) and return limited results
-    recommendations.sort((a, b) => b.score - a.score);
-    return recommendations.slice(0, limit);
   }
 }
 

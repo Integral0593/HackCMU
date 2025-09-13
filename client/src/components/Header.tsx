@@ -2,9 +2,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Link, useLocation } from "wouter";
+import { useQuery } from "@tanstack/react-query";
 import StatusIndicator from "./StatusIndicator";
 import { useAuth } from "@/contexts/AuthContext";
-import { PublicUser } from "@shared/schema";
+import { PublicUser, PendingFriendRequest } from "@shared/schema";
+import { Bell } from "lucide-react";
 import logoImage from "@assets/logo_1757730069515.png";
 
 type StatusType = "studying" | "free" | "in_class" | "busy" | "tired" | "social";
@@ -16,6 +18,14 @@ interface HeaderProps {
 export default function Header({ userStatus = "free" }: HeaderProps) {
   const { user, isAuthenticated, logout } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Fetch pending friend requests for notification count
+  const { data: pendingRequests } = useQuery<PendingFriendRequest[]>({
+    queryKey: ['/api/friends/requests'],
+    enabled: isAuthenticated && !!user,
+  });
+
+  const pendingCount = pendingRequests?.length || 0;
 
   const userInitials = user?.username
     .split(" ")
@@ -40,6 +50,21 @@ export default function Header({ userStatus = "free" }: HeaderProps) {
                 {/* User status */}
                 <StatusIndicator status={userStatus} size="sm" />
                 
+                {/* Notifications */}
+                <Link href="/notifications" data-testid="link-notifications">
+                  <div className="relative hover-elevate rounded-lg p-2 -m-2 cursor-pointer">
+                    <Bell className="h-5 w-5 text-white" />
+                    {pendingCount > 0 && (
+                      <Badge 
+                        variant="destructive" 
+                        className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs font-semibold min-w-[20px]"
+                      >
+                        {pendingCount > 9 ? '9+' : pendingCount}
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+                
                 {/* User info */}
                 <Link href="/profile" data-testid="link-profile">
                   <div className="flex items-center gap-2 hover-elevate rounded-lg p-1 -m-1 cursor-pointer">
@@ -55,27 +80,7 @@ export default function Header({ userStatus = "free" }: HeaderProps) {
                   </div>
                 </Link>
               </div>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button 
-                  onClick={() => setLocation('/login')} 
-                  data-testid="button-login"
-                  size="sm"
-                  variant="outline"
-                  className="text-xs sm:text-sm px-2 sm:px-3 min-h-[36px] sm:min-h-[32px] border-red-300 text-white hover:bg-red-700 hover:border-red-400"
-                >
-                  Login
-                </Button>
-                <Button 
-                  onClick={() => setLocation('/register')} 
-                  data-testid="button-register"
-                  size="sm"
-                  className="text-xs sm:text-sm px-2 sm:px-3 min-h-[36px] sm:min-h-[32px] bg-red-700 hover:bg-red-800 text-white border-red-600"
-                >
-                  Sign Up
-                </Button>
-              </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
