@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
@@ -8,12 +8,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Badge } from "@/components/ui/badge";
 import { insertScheduleSchema, InsertSchedule, Schedule } from "@shared/schema";
-import { Plus, X, Clock } from "lucide-react";
+import { Plus, X, Clock, Upload } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ScheduleFormProps {
   schedules: Schedule[];
   onAddSchedule: (schedule: InsertSchedule) => void;
   onRemoveSchedule?: (scheduleId: string) => void;
+  onUploadICS?: (schedules: Schedule[]) => void;
+  userId?: string;
 }
 
 const days = [
@@ -26,8 +29,11 @@ const days = [
   { value: "sunday", label: "Sunday" },
 ];
 
-export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedule }: ScheduleFormProps) {
+export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedule, onUploadICS, userId }: ScheduleFormProps) {
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
   
   const form = useForm<InsertSchedule>({
     resolver: zodResolver(insertScheduleSchema),
@@ -56,6 +62,64 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
     return `${displayHour}:${minutes} ${ampm}`;
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !userId) return;
+
+    if (!file.name.endsWith('.ics')) {
+      toast({
+        title: "Invalid file type",
+        description: "Please select a .ics calendar file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('icsFile', file);
+
+    try {
+      const response = await fetch(`/api/schedules/${userId}/upload-ics`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        toast({
+          title: "Success!",
+          description: result.message,
+        });
+        if (onUploadICS && result.schedules) {
+          onUploadICS(result.schedules);
+        }
+      } else {
+        toast({
+          title: "Upload failed",
+          description: result.error || "Failed to upload file",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An error occurred while uploading the file",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -64,18 +128,40 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
             <Clock className="h-5 w-5" />
             My Schedule
           </div>
-          <Button 
-            size="sm" 
-            onClick={() => setIsFormOpen(!isFormOpen)}
-            data-testid="add-schedule-button"
-          >
-            <Plus className="h-4 w-4 mr-1" />
-            Add Course
-          </Button>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              variant="outline"
+              onClick={handleUploadClick}
+              disabled={isUploading || !userId}
+              data-testid="upload-ics-button"
+            >
+              <Upload className="h-4 w-4 mr-1" />
+              {isUploading ? "Uploading..." : "Import ICS"}
+            </Button>
+            <Button 
+              size="sm" 
+              onClick={() => setIsFormOpen(!isFormOpen)}
+              data-testid="add-schedule-button"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Course
+            </Button>
+          </div>
         </CardTitle>
       </CardHeader>
       
       <CardContent className="space-y-4">
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".ics"
+          onChange={handleFileUpload}
+          style={{ display: 'none' }}
+          data-testid="file-input-ics"
+        />
+        
         {/* Schedule List */}
         <div className="space-y-2">
           {schedules.length === 0 ? (
@@ -231,6 +317,7 @@ export default function ScheduleForm({ schedules, onAddSchedule, onRemoveSchedul
                           <Input 
                             placeholder="UC Building, Room 101" 
                             {...field}
+                            value={field.value || ""}
                             data-testid="input-location"
                           />
                         </FormControl>

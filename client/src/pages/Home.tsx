@@ -122,7 +122,7 @@ export default function Home() {
       id: Math.random().toString(),
       username: data.username,
       major: data.major,
-      avatar: undefined,
+      avatar: null,
     };
     setUser(newUser);
     console.log('User logged in:', newUser);
@@ -147,7 +147,8 @@ export default function Home() {
     const schedule: Schedule = {
       ...newSchedule,
       id: Math.random().toString(),
-      userId: user.id
+      userId: user.id,
+      location: newSchedule.location || null
     };
     setSchedules(prev => [...prev, schedule]);
     console.log('Schedule added:', schedule);
@@ -179,6 +180,11 @@ export default function Home() {
   const handleConnect = (partnerId: string) => {
     console.log('Connecting to partner:', partnerId);
     // todo: Implement connection functionality
+  };
+
+  const handleUploadICS = (uploadedSchedules: Schedule[]) => {
+    setSchedules(prev => [...prev, ...uploadedSchedules]);
+    console.log('ICS uploaded, schedules added:', uploadedSchedules.length);
   };
 
   const handleUserClick = (userId: string) => {
@@ -302,6 +308,8 @@ export default function Home() {
               schedules={schedules}
               onAddSchedule={handleAddSchedule}
               onRemoveSchedule={handleRemoveSchedule}
+              onUploadICS={handleUploadICS}
+              userId={user?.id}
             />
           </TabsContent>
           

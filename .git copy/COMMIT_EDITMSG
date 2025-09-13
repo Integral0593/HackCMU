@@ -1,8 +1,8 @@
-Fix app crashing issue by handling missing avatar data
+Add ability to upload and parse course schedules from ICS files
 
-Handle undefined avatar values in createUser by converting them to null to prevent runtime errors.
+Integrates ICS file upload functionality, enabling users to import course schedules via .ics files. This involves adding new routes for handling file uploads, parsing ICS data on the server, and updating the client-side component to support file selection and display. Also introduces backend storage for schedules and type definitions for calendar events.
 
 Replit-Commit-Author: Agent
 Replit-Commit-Session-Id: a01c814c-1746-404e-a473-fbe4d7501018
 Replit-Commit-Checkpoint-Type: full_checkpoint
-Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/a9dfb115-e642-4401-8be3-a80648ab78a2/a01c814c-1746-404e-a473-fbe4d7501018/ZvHkItY
+Replit-Commit-Screenshot-Url: https://storage.googleapis.com/screenshot-production-us-central1/a9dfb115-e642-4401-8be3-a80648ab78a2/a01c814c-1746-404e-a473-fbe4d7501018/WmoSyma
