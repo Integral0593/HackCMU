@@ -25,7 +25,15 @@ export default function Header({ userStatus = "free" }: HeaderProps) {
     enabled: isAuthenticated && !!user,
   });
 
-  const pendingCount = pendingRequests?.length || 0;
+  // Fetch unread message notifications count
+  const { data: messageNotificationCount } = useQuery<{ count: number }>({
+    queryKey: ['/api/notifications/messages/unread-count'],
+    enabled: isAuthenticated && !!user,
+  });
+
+  const pendingFriendCount = pendingRequests?.length || 0;
+  const messageCount = messageNotificationCount?.count || 0;
+  const totalNotificationCount = pendingFriendCount + messageCount;
 
   const userInitials = user?.username
     .split(" ")
@@ -54,12 +62,13 @@ export default function Header({ userStatus = "free" }: HeaderProps) {
                 <Link href="/notifications" data-testid="link-notifications">
                   <div className="relative hover-elevate rounded-lg p-2 -m-2 cursor-pointer">
                     <Bell className="h-5 w-5 text-white" />
-                    {pendingCount > 0 && (
+                    {totalNotificationCount > 0 && (
                       <Badge 
                         variant="destructive" 
                         className="absolute -top-1 -right-1 h-5 w-5 p-0 flex items-center justify-center text-xs font-semibold min-w-[20px]"
+                        data-testid="notification-badge"
                       >
-                        {pendingCount > 9 ? '9+' : pendingCount}
+                        {totalNotificationCount > 9 ? '9+' : totalNotificationCount}
                       </Badge>
                     )}
                   </div>

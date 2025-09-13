@@ -9,6 +9,9 @@ import {
   type InsertMessage,
   type Friend,
   type InsertFriend,
+  type MessageNotification,
+  type InsertMessageNotification,
+  type MessageNotificationWithSender,
   type ChatWithLastMessage,
   type MessageWithSender,
   type RegisterUser,
@@ -22,7 +25,8 @@ import {
   chats,
   messages,
   friends,
-  userStatus
+  userStatus,
+  messageNotifications
 } from "@shared/schema";
 import { eq, and, or, desc, asc, isNull, sql } from "drizzle-orm";
 import { randomUUID } from "crypto";
@@ -78,6 +82,14 @@ export interface IStorage {
   
   // Recommendation methods
   getStudyPartnerRecommendations(userId: string, limit?: number): Promise<StudyPartner[]>;
+  
+  // Message notification methods
+  createMessageNotification(notification: InsertMessageNotification): Promise<MessageNotification>;
+  getMessageNotificationsByUserId(userId: string, limit?: number): Promise<MessageNotificationWithSender[]>;
+  markMessageNotificationAsRead(notificationId: string, userId: string): Promise<boolean>;
+  markAllMessageNotificationsAsRead(userId: string): Promise<number>;
+  getUnreadMessageNotificationsCount(userId: string): Promise<number>;
+  deleteMessageNotification(notificationId: string, userId: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
@@ -87,6 +99,7 @@ export class MemStorage implements IStorage {
   private messages: Map<string, Message>;
   private friends: Map<string, Friend>;
   private userStatuses: Map<string, any>;
+  private messageNotifications: Map<string, MessageNotification>;
 
   constructor() {
     this.users = new Map();
@@ -95,6 +108,7 @@ export class MemStorage implements IStorage {
     this.messages = new Map();
     this.friends = new Map();
     this.userStatuses = new Map();
+    this.messageNotifications = new Map();
   }
 
   async getUser(id: string): Promise<User | undefined> {
@@ -1381,6 +1395,98 @@ export class PostgreSQLStorage implements IStorage {
       console.error('Error in getStudyPartnerRecommendations:', error);
       return [];
     }
+  }
+
+  // Message notification methods
+  async createMessageNotification(notification: InsertMessageNotification): Promise<MessageNotification> {
+    const result = await db.insert(messageNotifications)
+      .values({
+        ...notification,
+        id: randomUUID(),
+        createdAt: new Date(),
+        isRead: false,
+      })
+      .returning();
+    return result[0];
+  }
+
+  async getMessageNotificationsByUserId(userId: string, limit = 50): Promise<MessageNotificationWithSender[]> {
+    const result = await db.select({
+      id: messageNotifications.id,
+      recipientId: messageNotifications.recipientId,
+      senderId: messageNotifications.senderId,
+      messageId: messageNotifications.messageId,
+      messagePreview: messageNotifications.messagePreview,
+      isRead: messageNotifications.isRead,
+      createdAt: messageNotifications.createdAt,
+      sender: {
+        id: users.id,
+        username: users.username,
+        fullName: users.fullName,
+        major: users.major,
+        avatar: users.avatar,
+      },
+      chat: {
+        id: chats.id,
+        user1Id: chats.user1Id,
+        user2Id: chats.user2Id,
+      }
+    })
+    .from(messageNotifications)
+    .leftJoin(users, eq(messageNotifications.senderId, users.id))
+    .leftJoin(messages, eq(messageNotifications.messageId, messages.id))
+    .leftJoin(chats, eq(messages.chatId, chats.id))
+    .where(eq(messageNotifications.recipientId, userId))
+    .orderBy(desc(messageNotifications.createdAt))
+    .limit(limit);
+
+    return result;
+  }
+
+  async markMessageNotificationAsRead(notificationId: string, userId: string): Promise<boolean> {
+    const result = await db.update(messageNotifications)
+      .set({ isRead: true })
+      .where(and(
+        eq(messageNotifications.id, notificationId),
+        eq(messageNotifications.recipientId, userId)
+      ))
+      .returning();
+    
+    return result.length > 0;
+  }
+
+  async markAllMessageNotificationsAsRead(userId: string): Promise<number> {
+    const result = await db.update(messageNotifications)
+      .set({ isRead: true })
+      .where(and(
+        eq(messageNotifications.recipientId, userId),
+        eq(messageNotifications.isRead, false)
+      ))
+      .returning();
+    
+    return result.length;
+  }
+
+  async getUnreadMessageNotificationsCount(userId: string): Promise<number> {
+    const result = await db.select({ count: sql`count(*)` })
+      .from(messageNotifications)
+      .where(and(
+        eq(messageNotifications.recipientId, userId),
+        eq(messageNotifications.isRead, false)
+      ));
+    
+    return Number(result[0].count) || 0;
+  }
+
+  async deleteMessageNotification(notificationId: string, userId: string): Promise<boolean> {
+    const result = await db.delete(messageNotifications)
+      .where(and(
+        eq(messageNotifications.id, notificationId),
+        eq(messageNotifications.recipientId, userId)
+      ))
+      .returning();
+    
+    return result.length > 0;
   }
 }
 
